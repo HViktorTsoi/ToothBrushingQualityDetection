@@ -31,14 +31,14 @@ import weka.MakeArffFile;
  * Created by admin on 2017/10/12.
  */
 
-public class CollectionActivity extends AppCompatActivity implements View.OnClickListener{
+public class CollectionActivity extends AppCompatActivity implements View.OnClickListener {
 
     public static CollectionActivity instance;
 
-    private Button button1,button2,button3,button4,button5,button6,button7,button8,button9,button10,button11,button12,button13,button14,button15,button16;
-    private Button button17,button18;
+    private Button button1, button2, button3, button4, button5, button6, button7, button8, button9, button10, button11, button12, button13, button14, button15, button16;
+    private Button button17, button18;
     private Button button_test;
-    private MenuItem item1,item2,item3,item4;
+    private MenuItem item1, item2, item3, item4;
 
     private int recordFlag = 0;
 
@@ -64,72 +64,72 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
          */
         File file = new File(Constant.FILE_PATH);
         File fileParent = file.getParentFile();
-        if(!fileParent.exists()){
+        if (!fileParent.exists()) {
             fileParent.mkdirs();
         }
         file = new File(Constant.MODEL_PATH);
         fileParent = file.getParentFile();
-        if(!fileParent.exists()){
+        if (!fileParent.exists()) {
             fileParent.mkdirs();
         }
         MakeArffFile.initArffFile();
 
-        mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         initialize();
     }
 
     private void initialize() {
 
-        button1 = (Button)findViewById(R.id.button1);
+        button1 = (Button) findViewById(R.id.button1);
         button1.setOnClickListener(this);
-        button2 = (Button)findViewById(R.id.button2);
+        button2 = (Button) findViewById(R.id.button2);
         button2.setOnClickListener(this);
-        button3 = (Button)findViewById(R.id.button3);
+        button3 = (Button) findViewById(R.id.button3);
         button3.setOnClickListener(this);
-        button4 = (Button)findViewById(R.id.button4);
+        button4 = (Button) findViewById(R.id.button4);
         button4.setOnClickListener(this);
-        button5 = (Button)findViewById(R.id.button5);
+        button5 = (Button) findViewById(R.id.button5);
         button5.setOnClickListener(this);
-        button6 = (Button)findViewById(R.id.button6);
+        button6 = (Button) findViewById(R.id.button6);
         button6.setOnClickListener(this);
-        button7 = (Button)findViewById(R.id.button7);
+        button7 = (Button) findViewById(R.id.button7);
         button7.setOnClickListener(this);
-        button8 = (Button)findViewById(R.id.button8);
+        button8 = (Button) findViewById(R.id.button8);
         button8.setOnClickListener(this);
-        button9 = (Button)findViewById(R.id.button9);
+        button9 = (Button) findViewById(R.id.button9);
         button9.setOnClickListener(this);
-        button10 = (Button)findViewById(R.id.button10);
+        button10 = (Button) findViewById(R.id.button10);
         button10.setOnClickListener(this);
-        button11 = (Button)findViewById(R.id.button11);
+        button11 = (Button) findViewById(R.id.button11);
         button11.setOnClickListener(this);
-        button12 = (Button)findViewById(R.id.button12);
+        button12 = (Button) findViewById(R.id.button12);
         button12.setOnClickListener(this);
-        button13 = (Button)findViewById(R.id.button13);
+        button13 = (Button) findViewById(R.id.button13);
         button13.setOnClickListener(this);
-        button14 = (Button)findViewById(R.id.button14);
+        button14 = (Button) findViewById(R.id.button14);
         button14.setOnClickListener(this);
-        button15 = (Button)findViewById(R.id.button15);
+        button15 = (Button) findViewById(R.id.button15);
         button15.setOnClickListener(this);
-        button16 = (Button)findViewById(R.id.button16);
+        button16 = (Button) findViewById(R.id.button16);
         button16.setOnClickListener(this);
-        button17 = (Button)findViewById(R.id.button17);
+        button17 = (Button) findViewById(R.id.button17);
         button17.setOnClickListener(this);
-        button18 = (Button)findViewById(R.id.button18);
+        button18 = (Button) findViewById(R.id.button18);
         button18.setOnClickListener(this);
-        button_test = (Button)findViewById(R.id.button_test);
+        button_test = (Button) findViewById(R.id.button_test);
         button_test.setOnClickListener(this);
 
     }
 
 
-    private static String  recordTyp = "";
+    private static String recordTyp = "";
     private static boolean mic_status = false;
 
     @Override
     public void onClick(View v) {
 
-        switch (v.getId()){
+        switch (v.getId()) {
             case R.id.button1:
                 if (!mic_status) {
                     mic_status = true;
@@ -164,7 +164,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }*/
                 break;
             case R.id.button2:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 2;
                     //recordering = true;
                     button2.setText("停止");
@@ -172,8 +172,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "1"; // = "Gargling";
                     //startRecording();
-                }
-                else if(recordFlag == 2){
+                } else if (recordFlag == 2) {
                     recordFlag = 0;
                     //recordering = false;
                     this.recordTyp = "18";
@@ -184,7 +183,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button3:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 3;
                     //recordering = true;
                     button3.setText("停止");
@@ -192,8 +191,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "2"; // = "ULBO";
                     //startRecording();
-                }
-                else if(recordFlag == 3){
+                } else if (recordFlag == 3) {
                     recordFlag = 0;
                     //recordering = false;
                     this.recordTyp = "18";
@@ -204,7 +202,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button4:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 4;
                     //recordering = true;
                     button4.setText("停止");
@@ -212,8 +210,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "3"; // = "UFO";
                     //startRecording();
-                }
-                else if(recordFlag == 4){
+                } else if (recordFlag == 4) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -224,7 +221,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button5:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 5;
                     //recordering = true;
                     button5.setText("停止");
@@ -232,8 +229,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "4"; // = "URBO";
                     //startRecording();
-                }
-                else if(recordFlag == 5){
+                } else if (recordFlag == 5) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -244,7 +240,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button6:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 6;
                     //recordering = true;
                     button6.setText("停止");
@@ -252,8 +248,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "5"; // = "ULBM";
                     //startRecording();
-                }
-                else if(recordFlag == 6){
+                } else if (recordFlag == 6) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -264,7 +259,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button7:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 7;
                     //recordering = true;
                     button7.setText("停止");
@@ -272,8 +267,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "6"; // = "URBM";
                     //startRecording();
-                }
-                else if(recordFlag == 7){
+                } else if (recordFlag == 7) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -284,7 +278,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button8:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 8;
                     //recordering = true;
                     button8.setText("停止");
@@ -292,8 +286,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "7"; // = "ULBI";
                     //startRecording();
-                }
-                else if(recordFlag == 8){
+                } else if (recordFlag == 8) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -304,7 +297,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button9:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 9;
                     //recordering = true;
                     button9.setText("停止");
@@ -312,8 +305,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "8"; // = "UFI";
                     //startRecording();
-                }
-                else if(recordFlag == 9){
+                } else if (recordFlag == 9) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -324,7 +316,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button10:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 10;
                     //recordering = true;
                     button10.setText("停止");
@@ -332,8 +324,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "9"; // = "URBI";
                     //startRecording();
-                }
-                else if(recordFlag == 10){
+                } else if (recordFlag == 10) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -344,7 +335,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button11:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 11;
                     //recordering = true;
                     button11.setText("停止");
@@ -352,8 +343,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "10"; // = "DLBO";
                     //startRecording();
-                }
-                else if(recordFlag == 11){
+                } else if (recordFlag == 11) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -364,7 +354,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button12:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 12;
                     //recordering = true;
                     button12.setText("停止");
@@ -372,8 +362,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "11"; // = "DFO";
                     //startRecording();
-                }
-                else if(recordFlag == 12){
+                } else if (recordFlag == 12) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -384,7 +373,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button13:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 13;
                     //recordering = true;
                     button13.setText("停止");
@@ -392,8 +381,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "12"; // = "DRBO";
                     //startRecording();
-                }
-                else if(recordFlag == 13){
+                } else if (recordFlag == 13) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -404,7 +392,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button14:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 14;
                     //recordering = true;
                     button14.setText("停止");
@@ -412,8 +400,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "13"; // = "DLBM";
                     //startRecording();
-                }
-                else if(recordFlag == 14){
+                } else if (recordFlag == 14) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -424,7 +411,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button15:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 15;
                     //recordering = true;
                     button15.setText("停止");
@@ -432,8 +419,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "14"; // = "DRBM";
                     //startRecording();
-                }
-                else if(recordFlag == 15){
+                } else if (recordFlag == 15) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -444,7 +430,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button16:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 16;
                     //recordering = true;
                     button16.setText("停止");
@@ -452,8 +438,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "15"; // = "DLBI";
                     //startRecording();
-                }
-                else if(recordFlag == 16){
+                } else if (recordFlag == 16) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -464,7 +449,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button17:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 17;
                     //recordering = true;
                     button17.setText("停止");
@@ -472,8 +457,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "16"; // = "DFI";
                     //startRecording();
-                }
-                else if(recordFlag == 17){
+                } else if (recordFlag == 17) {
                     recordFlag = 0;
                     this.recordTyp = "18";
                     //recordering = false;
@@ -484,7 +468,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button18:
-                if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 18;
                     //recordering = true;
                     button18.setText("停止");
@@ -492,8 +476,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //Todo:startRecording
                     this.recordTyp = "17"; // = "DRBI";
                     //startRecording();
-                }
-                else if(recordFlag == 18){
+                } else if (recordFlag == 18) {
                     recordFlag = 0;
                     //recordering = false;
                     this.recordTyp = "18";
@@ -504,8 +487,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.button_test:
-                if(recordFlag == 0){
-                    Intent intent = new Intent(CollectionActivity.this,DisplayActivity.class);
+                if (recordFlag == 0) {
+                    Intent intent = new Intent(CollectionActivity.this, DisplayActivity.class);
                     startActivity(intent);
                 }
                 break;
@@ -526,10 +509,10 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         item3 = menu.add(group, 3, 3, "0.5");
         item4 = menu.add(group, 4, 4, "0.8");
 
-        SharedPreferences userSettings= getSharedPreferences("setting",0);
-        int option = userSettings.getInt("option",1);
-        menu.setGroupCheckable(group,true,true);
-        switch (option){
+        SharedPreferences userSettings = getSharedPreferences("setting", 0);
+        int option = userSettings.getInt("option", 1);
+        menu.setGroupCheckable(group, true, true);
+        switch (option) {
             case 1:
                 item1.setChecked(true);
                 break;
@@ -572,10 +555,10 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         return true;
     }
 
-    private void setOption(int i){
+    private void setOption(int i) {
         SharedPreferences userSettings = getSharedPreferences("setting", 0);
         SharedPreferences.Editor editor = userSettings.edit();
-        editor.putInt("option",i);
+        editor.putInt("option", i);
         editor.commit();
     }
 
@@ -593,7 +576,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 
     private int windowLength = sampleRateInHz / 2;//3000;
 
-    public void startRecording(){
+    public void startRecording() {
 
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
         mFileName += "/record.3gp";
@@ -642,7 +625,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     //System.out.println("audioDeviceInfo Blu" + Constants.audioDeviceInfo_Blu.getType());
                     new Thread(new BlueRecordThread()).start();
                     unregisterReceiver(this);  //别遗漏
-                }else {//等待一秒后再尝试启动SCO
+                } else {//等待一秒后再尝试启动SCO
                     try {
                         Thread.sleep(10000);
                     } catch (InterruptedException e) {
@@ -658,7 +641,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     }
 
 
-    public void stopRecording(){
+    public void stopRecording() {
         System.out.println("stopRecording");
         //mAudioManager.stopBluetoothSco();
         mRecorder.stop();
@@ -668,7 +651,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             mAudioManager.setBluetoothScoOn(false);
             mAudioManager.stopBluetoothSco();
         }
-        Log.i(TAG,"stopRecording");
+        Log.i(TAG, "stopRecording");
     }
 
     class BlueRecordThread implements Runnable {
@@ -692,8 +675,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 System.out.println("datalist"+i+": "+datalist.get(i));
 
                 *//*
-                 ** By Y4
-                 *//*
+         ** By Y4
+         *//*
                 MakeArffFile.calculate(datalist, recordTyp);
             }
             for(int i=0;i<windowLength/2;i++){
@@ -731,17 +714,17 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             final int readsize = mRecorder.read(audiodata, 0, bufferSizeInBytes);
             //data.addAll(audiodata);
             //System.out.println("blue readsize:"+readsize);
-            System.out.println("blue adudioData:"+audiodata.toString());
+            System.out.println("blue adudioData:" + audiodata.toString());
 
-            for(int i =0;i<audiodata.length;i++){
+            for (int i = 0; i < audiodata.length; i++) {
                 data.add(audiodata[i]);
                 //System.out.println("audiodata"+i+":"+audiodata[i]);
             }
 
-            while(data.size() > windowLength){
-                List<Byte> datalist = data.subList(0,windowLength);
-                System.out.println("windowLength:"+windowLength);
-                System.out.println("datalistsize:"+datalist.size());
+            while (data.size() > windowLength) {
+                List<Byte> datalist = data.subList(0, windowLength);
+                System.out.println("windowLength:" + windowLength);
+                System.out.println("datalistsize:" + datalist.size());
                 /*for(int i=0;i<datalist.size();i++){
                     System.out.println("data"+i+": "+data.get(i));
                     System.out.println("datalist"+i+": "+datalist.get(i));
@@ -749,11 +732,11 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 
 
                 }*/
-                 /*
+                /*
                  * By Y4
                  */
                 MakeArffFile.calculate(datalist, recordTyp);
-                for(int i=0;i<windowLength;i++){
+                for (int i = 0; i < windowLength; i++) {
                     data.remove(0);
                 }
             }
