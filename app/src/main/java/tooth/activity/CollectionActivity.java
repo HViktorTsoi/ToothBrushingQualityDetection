@@ -1,9 +1,7 @@
 package tooth.activity;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -22,13 +20,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import tooth.util.Constants;
 import cjh.recorder.R;
 import weka.Constant;
 import weka.MakeArffFile;
 
 /**
  * Created by admin on 2017/10/12.
+ * Edited by Cui Jiahe 2018/07/16
  */
 
 public class CollectionActivity extends AppCompatActivity implements View.OnClickListener {
@@ -52,8 +50,6 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private AudioManager mAudioManager = null;
 
     public boolean recordering = false;
-
-    private ArrayList<Byte> data = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,7 +76,6 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     }
 
     private void initialize() {
-
         button1 = (Button) findViewById(R.id.button1);
         button1.setOnClickListener(this);
         button2 = (Button) findViewById(R.id.button2);
@@ -131,37 +126,21 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 
         switch (v.getId()) {
             case R.id.button1:
-                if (!mic_status) {
-                    mic_status = true;
-                    recordering = true;
-                    button1.setText("停止");
-                    button1.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    startRecording();
-                } else {
-                    mic_status = false;
-                    recordering = false;
-                    button1.setText("开始");
-                    button1.setBackgroundColor(getResources().getColor(R.color.gray));
-                    stopRecording();
-                }
-                /*if(recordFlag == 0){
+                if (recordFlag == 0) {
                     recordFlag = 1;
                     recordering = true;
                     button1.setText("停止");
-                    //Todo:startRecording
-                    //filePath = new File(extDir, AUDIORECORDER + "_" + System.currentTimeMillis() + "").getAbsolutePath() + ".pcm";
-                    //AudioRecorderUtil.startRecordering(filePath);
-                    this.recordTyp = "18"; //"NULL";
+                    button1.setBackgroundColor(getResources().getColor(R.color.light_green));
+                    button1.setBackgroundColor(getResources().getColor(R.color.gray));
+                    this.recordTyp = "1"; // = "Gargling";
                     startRecording();
-                }
-                else if(recordFlag == 1){
+                } else if (recordFlag == 1) {
                     recordFlag = 0;
                     recordering = false;
+                    this.recordTyp = "1"; // = "None";
                     button1.setText("无");
-                    //Todo:stopRecording
-                    //AudioRecorderUtil.stopRecording();
                     stopRecording();
-                }*/
+                }
                 break;
             case R.id.button2:
                 if (recordFlag == 0) {
@@ -580,87 +559,28 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
         mFileName += "/record.3gp";
+        // 实例化录音
         mRecorder = new AudioRecord(audioSource, sampleRateInHz,
                 channelConfig, audioFormat, bufferSizeInBytes);
-
-        /*if(Constants.flag2){
-        }*/
-        //AudioDeviceInfo audioDeviceInfo = new AudioDeviceInfo();
-        //mRecorder.setPreferredDevice(AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
-        /*mRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setOutputFile(mFileName);
-        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);*/
-        /*try {
-            mRecorder.prepare();
-        } catch (Exception e) {
-            // TODO: handle exception
-            Log.i(TAG, "prepare() failed!");
-        }*/
-        if (!mAudioManager.isBluetoothScoAvailableOffCall()) {
-            Log.i(TAG, "系统不支持蓝牙录音");
-            System.out.println("系统不支持蓝牙录音");
-            return;
-        }
-        Log.i(TAG, "系统支持蓝牙录音");
-        System.out.println("系统支持蓝牙录音");
-        mAudioManager.stopBluetoothSco();
-        mAudioManager.startBluetoothSco();//蓝牙录音的关键，启动SCO连接，耳机话筒才起作用
-
-        registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
-
-                if (AudioManager.SCO_AUDIO_STATE_CONNECTED == state) {
-                    Log.i(TAG, "AudioManager.SCO_AUDIO_STATE_CONNECTED");
-                    System.out.println("AudioManager.SCO_AUDIO_STATE_CONNECTED");
-                    mAudioManager.setBluetoothScoOn(true);  //打开SCO
-                    Log.i(TAG, "Routing:" + mAudioManager.isBluetoothScoOn());
-                    System.out.println("Routing:" + mAudioManager.isBluetoothScoOn());
-                    mAudioManager.setMode(AudioManager.STREAM_MUSIC);
-                    //mRecorder.start();//开始录音
-                    mRecorder.startRecording();
-                    //Constants.audioDeviceInfo_Blu = mRecorder.getRoutedDevice();
-                    //System.out.println("audioDeviceInfo Blu" + Constants.audioDeviceInfo_Blu.getType());
-                    new Thread(new BlueRecordThread()).start();
-                    unregisterReceiver(this);  //别遗漏
-                } else {//等待一秒后再尝试启动SCO
-                    try {
-                        Thread.sleep(10000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    mAudioManager.startBluetoothSco();
-                    Log.i(TAG, "再次startBluetoothSco()");
-                    System.out.println("再次startBluetoothSco()");
-                    //startRecording();
-                }
-            }
-        }, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_CHANGED));
+        // 开始录音,计算并写入
+        new Thread(new RecordThread()).start();
     }
 
 
     public void stopRecording() {
-        System.out.println("stopRecording");
-        //mAudioManager.stopBluetoothSco();
         mRecorder.stop();
         mRecorder.release();
         mRecorder = null;
-        if (mAudioManager.isBluetoothScoOn()) {
-            mAudioManager.setBluetoothScoOn(false);
-            mAudioManager.stopBluetoothSco();
-        }
         Log.i(TAG, "stopRecording");
     }
 
-    class BlueRecordThread implements Runnable {
+    class RecordThread implements Runnable {
         @Override
         public void run() {
-            //startRecording();
-            writeDateTOFile();
+            mRecorder.startRecording();
+            recordAndProcessData();
             dataOutput();
-            System.out.println("writeDataToFile");
+            System.out.println("Data Written.");
         }
     }
 
@@ -690,90 +610,29 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
      * 如果需要播放就必须加入一些格式或者编码的头信息。但是这样的好处就是你可以对音频的 裸数据进行处理，比如你要做一个爱说话的TOM
      * 猫在这里就进行音频的处理，然后重新封装 所以说这样得到的音频比较容易做一些音频的处理。
      */
-    private void writeDateTOFile() {
+    private void recordAndProcessData() {
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
-        final byte[] audiodata = new byte[bufferSizeInBytes];
-        /*FileOutputStream fos = null;
-        try {
-            File file = new File(mFileName);
-            if (file.exists()) {
-                file.delete();
+        final byte[] inputSignal = new byte[bufferSizeInBytes];
+        ArrayList<Byte> signalBuffer = new ArrayList<>();
+        while (recordering) {
+
+            final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
+            System.out.println("audioData:" + inputSignal.toString());
+
+            for (byte anInputSignal : inputSignal) {
+                signalBuffer.add(anInputSignal);
             }
 
-            file.createNewFile();
-
-            fos = new FileOutputStream(file);// 建立一个可存取字节的文件
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
-        while (recordering == true) {
-
-            //Constants.audioDeviceInfo_Blu = mRecorder.getRoutedDevice();
-            //System.out.println("audioDeviceInfo Blu:" + Constants.audioDeviceInfo_Blu.getType());
-
-            final int readsize = mRecorder.read(audiodata, 0, bufferSizeInBytes);
-            //data.addAll(audiodata);
-            //System.out.println("blue readsize:"+readsize);
-            System.out.println("blue adudioData:" + audiodata.toString());
-
-            for (int i = 0; i < audiodata.length; i++) {
-                data.add(audiodata[i]);
-                //System.out.println("audiodata"+i+":"+audiodata[i]);
-            }
-
-            while (data.size() > windowLength) {
-                List<Byte> datalist = data.subList(0, windowLength);
+            while (signalBuffer.size() > windowLength) {
+                List<Byte> datalist = signalBuffer.subList(0, windowLength);
                 System.out.println("windowLength:" + windowLength);
-                System.out.println("datalistsize:" + datalist.size());
-                /*for(int i=0;i<datalist.size();i++){
-                    System.out.println("data"+i+": "+data.get(i));
-                    System.out.println("datalist"+i+": "+datalist.get(i));
-
-
-
-                }*/
-                /*
-                 * By Y4
-                 */
+                System.out.println("dataListSize:" + datalist.size());
                 MakeArffFile.calculate(datalist, recordTyp);
                 for (int i = 0; i < windowLength; i++) {
-                    data.remove(0);
+                    signalBuffer.remove(0);
                 }
             }
-            /*if (AudioRecord.ERROR_INVALID_OPERATION != readsize) {
-                try {
-                    fos.write(audiodata);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            Timer timer = new Timer();
-            if (first)
-                timer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        long v = 0;
-                        // 将 buffer 内容取出，进行平方和运算
-                        for (int i = 0; i < audiodata.length; i++) {
-                            v += audiodata[i] * audiodata[i];
-                        }
-                        // 平方和除以数据总长度，得到音量大小。
-                        double mean = v / (double) readsize;
-                        final double volume = 10 * Math.log10(mean);
-                        MainActivity.instance.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                MainActivity.instance.voice.setText(volume + "");
-                            }
-                        });
-                    }
-                }, 0, 1000);*/
 
         }
-        /*try {
-            fos.close();// 关闭写入流
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
     }
 }
