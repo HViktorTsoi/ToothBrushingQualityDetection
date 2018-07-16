@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <!-- group是分组 -->
+    <group android:id="@+id/group1" >
+
+        <!-- item是一个菜单选项 -->
+        <item
+            android:id="@+id/item1"
+            android:title="0.1">
+            <!-- 在一个item中添加一个menu就是子菜单 -->
+            <!--<menu>
+                &lt;!&ndash; 子菜单中的菜单选项 &ndash;&gt;
+                <item
+                    android:icon="@mipmap/ic_launcher"
+                    android:id="@+id/item1_1"
+                    android:title="子菜单内选项1"/>
+                <item
+                    android:id="@+id/item1_2"
+                    android:title="子菜单内选项2"/>
+            </menu>-->
+        </item>
+        <item
+            android:id="@+id/item2"
+            android:title="0.2">
+        </item>
+    </group>
+    <group android:id="@+id/group2" >
+        <item
+            android:id="@+id/item3"
+            android:title="0.5">
+        </item>
+        <item
+            android:id="@+id/item4"
+            android:title="1">
+        </item>
+    </group>
+
+</menu>

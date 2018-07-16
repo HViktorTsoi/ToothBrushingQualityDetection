@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/blue"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/brushresult_totaltime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:paddingTop="15dp"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="15dp"
+        android:background="@drawable/textview_bg"
+        android:text="@string/brushresult_totaltime"
+        android:textColor="@color/white"
+        android:textSize="20sp"/>
+
+    <TextView
+        android:id="@+id/brushresult_grade"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:paddingTop="15dp"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="15dp"
+        android:background="@drawable/textview_bg"
+        android:text="@string/brushresult_grade"
+        android:textColor="@color/white"
+        android:textSize="20sp"/>
+
+    <TextView
+        android:id="@+id/brushresult_strings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:paddingTop="15dp"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="15dp"
+        android:background="@drawable/textview_bg"
+        android:text="@string/brushresult_strings"
+        android:textColor="@color/black"
+        android:textSize="12sp"/>
+
+
+</LinearLayout>

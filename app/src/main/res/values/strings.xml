@@ -1,0 +1,61 @@
+<resources>
+    <string name="app_name">家庭智能口腔护理系统</string>
+
+    <string name="up">上：</string>
+    <string name="down">下：</string>
+    <string name="left">左：</string>
+    <string name="right">右：</string>
+    <string name="back">后：</string>
+    <string name="front">前：</string>
+    <string name="outer">外：</string>
+    <string name="inner">内：</string>
+
+    <string name="main_adduser">添加用户</string>
+    <string name="main_chooseuser">选择用户</string>
+    <string name="main_datacollection">数据采集</string>
+
+    <string name="add_username">请输入用户姓名</string>
+    <string name="add_confirm">确认添加</string>
+    <string name="add_success">用户添加成功</string>
+
+    <string name="dialog_title">提示：</string>
+    <string name="dialog_message">请输入要添加的用户名</string>
+    <string name="dialog_confirm">确认</string>
+    <string name="dialog_nouser">无用户，请先添加用户！</string>
+
+    <string name="choose_user">用户</string>
+    <string name="choose_users">当前用户</string>
+
+    <string name="user_brush">刷牙评估</string>
+    <string name="user_log">日  志</string>
+
+    <string name="display_result">结果</string>
+
+    <string name="brushresult_totaltime">刷牙总时间</string>
+    <string name="brushresult_grade">分数</string>
+    <string name="brushresult_strings">字符串</string>
+    <string name="brushresult_fen">分</string>
+    <string name="brushresult_ulbo">上左后外</string>
+    <string name="brushresult_ufo">上前外</string>
+    <string name="brushresult_urbo">上右后外</string>
+    <string name="brushresult_ulbm">上左后中</string>
+    <string name="brushresult_urbm">上右后中</string>
+    <string name="brushresult_ulbi">上左后内</string>
+    <string name="brushresult_ufi">上前内</string>
+    <string name="brushresult_urbi">上右后内</string>
+    <string name="brushresult_dlbo">下左后外</string>
+    <string name="brushresult_dfo">下前外</string>
+    <string name="brushresult_drbo">下右后外</string>
+    <string name="brushresult_dlbm">下左后中</string>
+    <string name="brushresult_drbm">下右后中</string>
+    <string name="brushresult_dlbi">下左后内</string>
+    <string name="brushresult_dfi">下前内</string>
+    <string name="brushresult_drbi">下右后内</string>
+
+    <string name="log_username">用户名</string>
+    <string name="log_num">次数</string>
+    <string name="log_time">时间</string>
+    <string name="log_duration">时长</string>
+    <string name="log_grade">分数</string>
+
+</resources>

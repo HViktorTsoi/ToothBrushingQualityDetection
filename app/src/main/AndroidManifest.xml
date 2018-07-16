@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="cjh.recorder">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.BROADCAST_STICKY"/>
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity android:name="tooth.activity.MainAcitvity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name="tooth.activity.CollectionActivity"/>
+        <activity android:name="tooth.activity.DisplayActivity"/>
+        <activity android:name="tooth.activity.AddUserActivity"/>
+        <activity android:name="tooth.activity.ChooseUserActivity"/>
+        <activity android:name="tooth.activity.UserActivity"/>
+        <activity android:name="tooth.activity.BrushResultActivity"/>
+        <activity android:name="tooth.activity.LogActivity"/>
+
+        <receiver
+            android:name="cjh.recorder.BTBroadcastReceiver">
+            <intent-filter>
+                <action android:name="android.bluetooth.headset.profile.action.CONNECTION_STATE_CHANGED" />
+                <action android:name="android.media.ACTION_SCO_AUDIO_STATE_UPDATED"/>
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

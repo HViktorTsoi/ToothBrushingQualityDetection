@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffffff"
+    android:gravity="center"
+    android:orientation="vertical"
+    tools:context="cjh.recorder.MainActivity">
+
+
+
+    <ImageView
+        android:id="@+id/img1"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_margin="20dp"
+        android:src="@mipmap/ic_launcher"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/mediarecorder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#bebebe"
+            android:padding="10dp"
+            android:layout_marginLeft="2dp"
+            android:text="mediarecorder"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/audiorecorder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#bebebe"
+            android:padding="10dp"
+            android:layout_marginLeft="2dp"
+            android:text="audiorecorder"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#bebebe"
+            android:padding="10dp"
+            android:layout_marginLeft="2dp"
+            android:text="play"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_marginLeft="70dp"
+            android:text="准备就绪"
+            android:textColor="#ff0000"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/voice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_marginLeft="90dp"
+            android:text="预备起..."
+            android:textColor="#ff0000"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/img2"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_margin="20dp"
+        android:src="@mipmap/ic_launcher"/>
+
+
+
+</LinearLayout>

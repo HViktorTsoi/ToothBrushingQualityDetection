@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/blue"
+    android:orientation="vertical">
+
+    <EditText
+        android:id="@+id/add_username"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:paddingTop="15dp"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="15dp"
+        android:background="@drawable/textview_bg"
+        android:hint="@string/add_username"
+        android:textColorHint="@color/white"
+        android:textSize="20sp"
+        android:maxLines="1"/>
+
+    <TextView
+        android:id="@+id/add_confirm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:paddingTop="15dp"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="15dp"
+        android:background="@drawable/selector_bg"
+        android:text="@string/add_confirm"
+        android:textColor="@color/black"
+        android:textSize="20sp"/>
+
+
+</LinearLayout>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/blue"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/main_adduser"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:paddingTop="15dp"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="15dp"
+        android:background="@drawable/selector_bg"
+        android:text="@string/main_adduser"
+        android:textColor="@color/black"
+        android:textSize="20sp"/>
+
+    <TextView
+        android:id="@+id/main_chooseuser"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:paddingTop="15dp"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="15dp"
+        android:background="@drawable/selector_bg"
+        android:text="@string/main_chooseuser"
+        android:textColor="@color/black"
+        android:textSize="20sp"/>
+
+    <TextView
+        android:id="@+id/main_datacollection"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:paddingTop="15dp"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="15dp"
+        android:background="@drawable/selector_bg"
+        android:text="@string/main_datacollection"
+        android:textColor="@color/black"
+        android:textSize="20sp"/>
+
+    <ImageView
+        android:id="@+id/main_chooseuser"
+        android:layout_width="200dp"
+        android:layout_height="0dp"
+        android:layout_weight="2"
+        android:layout_gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:paddingTop="15dp"
+        android:paddingBottom="15dp"
+        android:src="@drawable/tooth1"/>
+
+</LinearLayout>
