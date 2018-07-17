@@ -10,42 +10,95 @@
 
     <LinearLayout
         android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:orientation="horizontal">
+
+        <SeekBar
+            android:id="@+id/AdjWindowSize"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="4" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/window_size" />
+
+        <TextView
+            android:id="@+id/txtCurWindowSize"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:orientation="horizontal">
+
+        <SeekBar
+            android:id="@+id/AdjOverlapPecentage"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="4" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/overlap_percentage" />
+
+        <TextView
+            android:id="@+id/txtCurOverlapPecentage"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/button1"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="无"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button2"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="漱口"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button3"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="上左后外"
             android:textSize="18sp" />
     </LinearLayout>
@@ -58,36 +111,36 @@
         <Button
             android:id="@+id/button4"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="上前外"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button5"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="上右后外"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button6"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="上左后中"
             android:textSize="18sp" />
     </LinearLayout>
@@ -100,36 +153,36 @@
         <Button
             android:id="@+id/button7"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="上右后中"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button8"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="上左后内"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button9"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="上前内"
             android:textSize="18sp" />
     </LinearLayout>
@@ -142,36 +195,36 @@
         <Button
             android:id="@+id/button10"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="上右后内"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button11"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="下左后外"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button12"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="下前外"
             android:textSize="18sp" />
     </LinearLayout>
@@ -184,36 +237,36 @@
         <Button
             android:id="@+id/button13"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="下右后外"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button14"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="下左后中"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button15"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="下右后中"
             android:textSize="18sp" />
     </LinearLayout>
@@ -226,36 +279,36 @@
         <Button
             android:id="@+id/button16"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="下左后内"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button17"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="下前内"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/button18"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
             android:background="@color/gray"
             android:padding="10dp"
-            android:layout_margin="5dp"
             android:text="下右后内"
             android:textSize="18sp" />
     </LinearLayout>
@@ -265,9 +318,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_margin="10dp"
         android:background="@drawable/selector_bg"
         android:padding="10dp"
-        android:layout_margin="10dp"
         android:text="测试"
         android:textSize="18sp" />
 
@@ -276,39 +329,47 @@
         android:layout_height="wrap_content"
         android:text="Tips:"
         android:textColor="@android:color/black"
-        android:textSize="14sp"/>
+        android:textSize="14sp" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/up"/>
+        android:text="@string/up" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/down"/>
+        android:text="@string/down" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/left"/>
+        android:text="@string/left" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/right"/>
+        android:text="@string/right" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/back"/>
+        android:text="@string/back" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/front"/>
+        android:text="@string/front" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/outer"/>
+        android:text="@string/outer" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/inner"/>
+        android:text="@string/inner" />
 
     <TextView
         android:layout_width="match_parent"

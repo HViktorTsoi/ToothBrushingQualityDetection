@@ -12,6 +12,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -35,7 +37,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private HashMap<Integer, PositionButtonWrapper> positionClassButtonMap = new HashMap<>();
     private Button button_test;
     private MenuItem item1, item2, item3, item4;
-
+    private SeekBar sbAdjWindowSize, sbAdjOverlapPercentage;
+    private TextView txtWindowLength, txtCurOverlapPercentage;
     private String TAG = "ToothRecord";
     private AudioRecord mRecorder = null;
     // 正在记录的位置类型
@@ -54,8 +57,10 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     // 缓冲区字节大小
     private static int bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz,
             channelConfig, audioFormat);
-
-    private int windowLength = sampleRateInHz / 2;//3000;
+    final static double maxWindowLength = 0.5;
+    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLength / 2);//0.5s;
+    // 步长
+    private int overlapPercentage = 50;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +85,10 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         initialize();
     }
 
+    /*
+     *
+     * 初始化视图绑定
+     * */
     private void initialize() {
         int[] buttonIDs = {
                 R.id.button1, R.id.button2, R.id.button3, R.id.button4,
@@ -95,9 +104,62 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     new PositionButtonWrapper((Button) findViewById(buttonID), positionClassButtonMap.size() + 1));
             positionClassButtonMap.get(buttonID).getButton().setOnClickListener(this);
         }
-        assert button_test != null;
         button_test = (Button) findViewById(R.id.button_test);
+        assert button_test != null;
         button_test.setOnClickListener(this);
+//        初始化seekbar 调整窗口大小
+        txtWindowLength = (TextView) findViewById(R.id.txtCurWindowSize);
+        sbAdjWindowSize = (SeekBar) findViewById(R.id.AdjWindowSize);
+        assert sbAdjWindowSize != null;
+        // 初始化窗口大小
+        int initProgress = (int) ((double) windowLength / (double) sampleRateInHz * 100);
+        sbAdjWindowSize.setProgress(initProgress);
+        txtWindowLength.setText(String.format("%.2fs", progressToWindowSize(initProgress)));
+        sbAdjWindowSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
+                txtWindowLength.setText(String.format("%.2fs", progressToWindowSize(progress)));
+                // 计算并设置窗口大小
+                windowLength = (int) (sampleRateInHz * progressToWindowSize(progress));
+                System.out.println(windowLength);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+        sbAdjOverlapPercentage = (SeekBar) findViewById(R.id.AdjOverlapPecentage);
+        sbAdjOverlapPercentage.setProgress(overlapPercentage);
+        txtCurOverlapPercentage = (TextView) findViewById(R.id.txtCurOverlapPecentage);
+        txtCurOverlapPercentage.setText(String.format("%d%%", overlapPercentage));
+        sbAdjOverlapPercentage.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
+                overlapPercentage = progress;
+                txtCurOverlapPercentage.setText(String.format("%d%%", overlapPercentage));
+                System.out.println(overlapPercentage);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+    }
+
+    private double progressToWindowSize(double progress) {
+        return (progress + 1) / 100 * maxWindowLength;
     }
 
     @Override
@@ -118,10 +180,12 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 isRecording = true;
                 currentButton.setText("停止");
                 currentButton.setBackgroundColor(getResources().getColor(R.color.light_green));
+                sbAdjWindowSize.setEnabled(false);
                 startRecording();
             } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
                 recordFlag = 0;
                 isRecording = false;
+                sbAdjWindowSize.setEnabled(true);
                 currentButton.setText(positionButtonWrapper.getLabel());
                 currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
                 stopRecording();

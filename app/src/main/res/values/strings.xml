@@ -52,6 +52,9 @@
     <string name="brushresult_dfi">下前内</string>
     <string name="brushresult_drbi">下右后内</string>
 
+    <string name="window_size">窗口大小:</string>
+    <string name="overlap_percentage">步长:</string>
+
     <string name="log_username">用户名</string>
     <string name="log_num">次数</string>
     <string name="log_time">时间</string>
