@@ -68,12 +68,13 @@ public class MakeArffFile {
 
 
     private static ArrayList<String> _record = new ArrayList<>();
-    public static void calculate(List<Byte> datalist, String type) {
+    public static void calculate(List<Byte> datalist, String type, int sampleRateInHz, int channelConfig) {
         double[] param = new double[datalist.size()];
         for(int i=0; i<datalist.size(); i++)
             param[i] = Double.valueOf(datalist.get(i));
         double[] t_ret = AudioFeature.timedomain(param);
         double[] f_ret = AudioFeature.freqdomain(param);
+        List<float[]> mfcc_ret=AudioFeature.mfccFeature(datalist,sampleRateInHz,channelConfig);
         //String tmp = "";
         try {
             writer = new FileWriter(Constant.FILE_PATH, true);

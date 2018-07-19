@@ -7,6 +7,7 @@ package weka;
 public class Constant {
     public static final String FILE_PATH = "/sdcard/bushingrecode/data/data.arff";
     public static final String MODEL_PATH = "/sdcard/bushingrecode/model/tree.model";
+    public static final String MFCC_TMP_PATH = "/sdcard/bushingrecode/mfcc_temp.wav";
 
     final static public String[] WEKA_ATTS = { "bMax", "bMin", "bMean", "bSTD", "bMed", "bKur", "bSke", "bQ1", "bQ3", "bIQR", "bFMean1", "bFMean2",
             "bFMean3", "bFMean4", "bFMean5", "bFMean6", "bFMean7", "bFSD", "bFMed", "bFKur", "bFSke",

@@ -6,6 +6,7 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.support.v4.content.res.TypedArrayUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -16,14 +17,29 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 
+import be.tarsos.dsp.AudioDispatcher;
+import be.tarsos.dsp.AudioEvent;
+import be.tarsos.dsp.AudioProcessor;
+import be.tarsos.dsp.io.TarsosDSPAudioFormat;
+import be.tarsos.dsp.io.UniversalAudioInputStream;
+import be.tarsos.dsp.io.android.AndroidFFMPEGLocator;
+import be.tarsos.dsp.io.android.AudioDispatcherFactory;
+import be.tarsos.dsp.mfcc.MFCC;
 import cjh.recorder.R;
 import tooth.util.PositionButtonWrapper;
+import tooth.util.wav.WavFileWriter;
 import weka.Constant;
 import weka.MakeArffFile;
+
+import static weka.Constant.MFCC_TMP_PATH;
 
 /**
  * Created by admin on 2017/10/12.
@@ -83,6 +99,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         MakeArffFile.initArffFile();
 
         initialize();
+
+        new AndroidFFMPEGLocator(this);
     }
 
     /*
@@ -300,8 +318,11 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 List<Byte> datalist = signalBuffer.subList(0, windowLength);
                 System.out.println("windowLength:" + windowLength);
                 System.out.println("dataListSize:" + datalist.size());
-                MakeArffFile.calculate(datalist, String.valueOf(recordFlag));
-                for (int i = 0; i < windowLength; i++) {
+
+                MakeArffFile.calculate(datalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
+                // 此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
+                System.out.println((double) windowLength * (1 - (double) overlapPercentage / 100));
+                for (int i = 0; i < (double) windowLength * (1 - (double) overlapPercentage / 100); i++) {
                     signalBuffer.remove(0);
                 }
             }
