@@ -140,7 +140,7 @@ public class AudioFeature {
             InputStream inStream = new FileInputStream(MFCC_TMP_PATH);
             AudioDispatcher dispatcher = new AudioDispatcher(
                     new UniversalAudioInputStream(inStream, new TarsosDSPAudioFormat(sampleRateInHz, datalist.size(), 1, true, true)), datalist.size(), 100);
-            final MFCC mfcc = new MFCC(datalist.size(), sampleRateInHz, 24, 50, 300, 3000);
+            final MFCC mfcc = new MFCC(datalist.size(), sampleRateInHz, 12, 50, 300, 3000);
             dispatcher.addAudioProcessor(mfcc);
             dispatcher.addAudioProcessor(new AudioProcessor() {
                 @Override
@@ -154,12 +154,6 @@ public class AudioFeature {
                 }
             });
             dispatcher.run();
-            for (float[] n : mfccList) {
-                for (float num : n) {
-                    System.out.println(num);
-                }
-                System.out.println("===========1D of MFCC===========");
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }

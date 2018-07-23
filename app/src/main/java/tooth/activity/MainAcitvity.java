@@ -36,7 +36,7 @@ import weka.gui.Main;
 
 public class MainAcitvity extends AppCompatActivity implements View.OnClickListener {
 
-    private TextView adduser, chooseuser, datacollection;
+    private TextView adduser, chooseuser, datacollection, startBrushing;
     private MenuItem item1;
 
     private final static String XMLPATH = "F:\\toothbrush_detector_setting.xml";   //别忘了改这里
@@ -56,24 +56,14 @@ public class MainAcitvity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void initialize() {
-        adduser = (TextView)findViewById(R.id.main_adduser);
+        adduser = (TextView) findViewById(R.id.main_adduser);
         adduser.setOnClickListener(this);
-        chooseuser = (TextView)findViewById(R.id.main_chooseuser);
+        chooseuser = (TextView) findViewById(R.id.main_chooseuser);
         chooseuser.setOnClickListener(this);
-        datacollection = (TextView)findViewById(R.id.main_datacollection);
+        datacollection = (TextView) findViewById(R.id.main_datacollection);
         datacollection.setOnClickListener(this);
-
-        /*try {
-            File file = new File(Environment.getExternalStorageDirectory(),
-                    "toothbrush_detector_setting.txt");
-            FileOutputStream fos = new FileOutputStream(file);
-            String info = "192.168.0.183";
-            fos.write(info.getBytes());
-            fos.close();
-            Log.i(Constants.TAG,"读写成功！");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
+        startBrushing = (TextView) findViewById(R.id.main_startbrushing);
+        startBrushing.setOnClickListener(this);
     }
 
 
@@ -102,7 +92,7 @@ public class MainAcitvity extends AppCompatActivity implements View.OnClickListe
             }
             br.close();
             ServerConstant.IP_ADDRESS = sb.toString();
-            Log.i(Constants.TAG,"ip:"+sb.toString());
+            Log.i(Constants.TAG, "ip:" + sb.toString());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -111,18 +101,22 @@ public class MainAcitvity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View v) {
-        Intent intent ;
-        switch (v.getId()){
+        Intent intent;
+        switch (v.getId()) {
             case R.id.main_adduser:
-                intent = new Intent(MainAcitvity.this,AddUserActivity.class);
+                intent = new Intent(MainAcitvity.this, AddUserActivity.class);
                 startActivity(intent);
                 break;
             case R.id.main_chooseuser:
-                intent = new Intent(MainAcitvity.this,ChooseUserActivity.class);
+                intent = new Intent(MainAcitvity.this, ChooseUserActivity.class);
                 startActivity(intent);
                 break;
             case R.id.main_datacollection:
-                intent = new Intent(MainAcitvity.this,CollectionActivity.class);
+                intent = new Intent(MainAcitvity.this, CollectionActivity.class);
+                startActivity(intent);
+                break;
+            case R.id.main_startbrushing:
+                intent = new Intent(MainAcitvity.this, DisplayActivity.class);
                 startActivity(intent);
                 break;
             default:

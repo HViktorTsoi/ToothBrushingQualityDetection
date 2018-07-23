@@ -26,10 +26,11 @@ public class MakeArffFile {
         try {
             File file = new File(Constant.FILE_PATH);
             boolean flag = true;
-            if (!file.exists()) {
-                FileOutputStream fos = new FileOutputStream(Constant.FILE_PATH, true);
-                flag = false;
+            if (file.exists()) {
+                file.delete();
             }
+            FileOutputStream fos = new FileOutputStream(Constant.FILE_PATH, true);
+            flag = false;
             writer = new FileWriter(Constant.FILE_PATH, true);
             if (!flag) {
                 writer.write("@relation mfcc_td_fd\n");
@@ -69,7 +70,7 @@ public class MakeArffFile {
                 writer.write("@attribute MFCC11 numeric\n");
                 writer.write("@attribute MFCC12 numeric\n");
                 // 分类目标
-                writer.write("@attribute class {18,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17}\n");
+                writer.write("@attribute class {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18}\n");
                 writer.write("\n");
                 writer.write("@data\n");
                 writer.close();

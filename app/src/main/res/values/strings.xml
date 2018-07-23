@@ -13,6 +13,7 @@
     <string name="main_adduser">添加用户</string>
     <string name="main_chooseuser">选择用户</string>
     <string name="main_datacollection">数据采集</string>
+    <string name="main_startbrushing">开始刷牙</string>
 
     <string name="add_username">请输入用户姓名</string>
     <string name="add_confirm">确认添加</string>

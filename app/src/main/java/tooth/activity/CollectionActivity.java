@@ -8,6 +8,7 @@ import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.support.v4.content.res.TypedArrayUtils;
 import android.support.v7.app.AppCompatActivity;
+import android.util.JsonWriter;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -16,14 +17,31 @@ import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import org.apache.http.Consts;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import be.tarsos.dsp.AudioDispatcher;
 import be.tarsos.dsp.AudioEvent;
@@ -35,6 +53,7 @@ import be.tarsos.dsp.io.android.AudioDispatcherFactory;
 import be.tarsos.dsp.mfcc.MFCC;
 import cjh.recorder.R;
 import tooth.util.PositionButtonWrapper;
+import tooth.util.noise.SpectralSubtraction;
 import tooth.util.wav.WavFileWriter;
 import weka.Constant;
 import weka.MakeArffFile;
@@ -195,14 +214,12 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             // 如果未开始录制 则开始采集对应类别的信息 否则停止
             if (recordFlag == 0) {
                 recordFlag = positionButtonWrapper.getButtonLogicID();
-                isRecording = true;
                 currentButton.setText("停止");
                 currentButton.setBackgroundColor(getResources().getColor(R.color.light_green));
                 sbAdjWindowSize.setEnabled(false);
                 startRecording();
             } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
                 recordFlag = 0;
-                isRecording = false;
                 sbAdjWindowSize.setEnabled(true);
                 currentButton.setText(positionButtonWrapper.getLabel());
                 currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
@@ -211,77 +228,18 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        /*MenuInflater in = getMenuInflater();
-        in.inflate(R.menu.menu_layout, menu);*/
-        super.onCreateOptionsMenu(menu);
-        int group = 1;
-        item1 = menu.add(group, 1, 1, "0.1");
-        item2 = menu.add(group, 2, 2, "0.2");
-        item3 = menu.add(group, 3, 3, "0.5");
-        item4 = menu.add(group, 4, 4, "0.8");
-
-        SharedPreferences userSettings = getSharedPreferences("setting", 0);
-        int option = userSettings.getInt("option", 1);
-        menu.setGroupCheckable(group, true, true);
-        switch (option) {
-            case 1:
-                item1.setChecked(true);
-                break;
-            case 2:
-                item2.setChecked(true);
-                break;
-            case 3:
-                item3.setChecked(true);
-                break;
-            case 4:
-                item4.setChecked(true);
-        }
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case 1:
-                setOption(1);
-                item1.setChecked(true);
-                break;
-            case 2:
-                setOption(2);
-                item2.setChecked(true);
-                break;
-            case 3:
-                setOption(3);
-                item3.setChecked(true);
-                break;
-            case 4:
-                setOption(4);
-                item4.setChecked(true);
-                break;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-        return true;
-    }
-
-    private void setOption(int i) {
-        SharedPreferences userSettings = getSharedPreferences("setting", 0);
-        SharedPreferences.Editor editor = userSettings.edit();
-        editor.putInt("option", i);
-        editor.commit();
-    }
-
     public void startRecording() {
+        isRecording = true;
         // 实例化录音
         mRecorder = new AudioRecord(audioSource, sampleRateInHz,
                 channelConfig, audioFormat, bufferSizeInBytes);
+        Log.i(TAG, "startRecording");
         // 开始录音,计算并写入
         new Thread(new RecordThread()).start();
     }
 
     public void stopRecording() {
+        isRecording = false;
         mRecorder.stop();
         mRecorder.release();
         mRecorder = null;
@@ -306,26 +264,68 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
         final byte[] inputSignal = new byte[bufferSizeInBytes];
         ArrayList<Byte> signalBuffer = new ArrayList<>();
+        ArrayList<Byte> totalSignal = new ArrayList<>();
+        System.out.println("windowLength:" + windowLength);
         while (isRecording) {
             final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
-            System.out.println("audioData:" + inputSignal.toString());
 
             for (byte anInputSignal : inputSignal) {
                 signalBuffer.add(anInputSignal);
+                totalSignal.add(anInputSignal);
             }
             // 消费若干个窗口
             while (signalBuffer.size() > windowLength) {
                 List<Byte> datalist = signalBuffer.subList(0, windowLength);
-                System.out.println("windowLength:" + windowLength);
-                System.out.println("dataListSize:" + datalist.size());
-
+                System.out.println(".");
                 MakeArffFile.calculate(datalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
                 // 此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-                System.out.println((double) windowLength * (1 - (double) overlapPercentage / 100));
                 for (int i = 0; i < (double) windowLength * (1 - (double) overlapPercentage / 100); i++) {
                     signalBuffer.remove(0);
                 }
             }
         }
+
+        // 发送请求
+        try {
+
+            // short类型的signal
+            short[] signal_16bit = new short[totalSignal.size() / 2];
+            // 原始信号
+            JSONArray sigSeq = new JSONArray();
+            for (int i = 0; i < totalSignal.size(); i += 2) {
+                // little edian
+                int sig = rawAudioDataToShort(totalSignal.get(i), totalSignal.get(i + 1));
+                signal_16bit[i / 2] = (short) sig;
+                sigSeq.put(sig);
+            }
+            // 降噪之后的信号
+            SpectralSubtraction spectralSubstraction = new SpectralSubtraction(signal_16bit, 1024, 30);
+            signal_16bit = spectralSubstraction.noiseSubtraction();
+            JSONArray sigSeq_denoise = new JSONArray();
+            for (short sig : signal_16bit) {
+                sigSeq_denoise.put(sig);
+            }
+            byte[] buf = ("audio=" + sigSeq.toString() + "&audio_denoise=" + sigSeq_denoise.toString()).getBytes();
+//            URL url = new URL("http://192.168.1.103:5000/audio");
+            URL url = new URL("http://192.168.1.103:5000/audio");
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("POST");
+            con.setDoOutput(true);
+            OutputStream out = con.getOutputStream();
+            out.write(buf);
+            out.close();
+            int responseCode = con.getResponseCode();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /*
+     * 将raw数据中的二进制转换为实际的音频信号
+     *
+     * */
+    private int rawAudioDataToShort(byte high, byte low) {
+        return (short) (low * 256) + (short) high;
     }
 }
