@@ -1,64 +1,35 @@
 package tooth.activity;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.support.v4.content.res.TypedArrayUtils;
 import android.support.v7.app.AppCompatActivity;
-import android.util.JsonWriter;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import org.apache.http.Consts;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import be.tarsos.dsp.AudioDispatcher;
-import be.tarsos.dsp.AudioEvent;
-import be.tarsos.dsp.AudioProcessor;
-import be.tarsos.dsp.io.TarsosDSPAudioFormat;
-import be.tarsos.dsp.io.UniversalAudioInputStream;
 import be.tarsos.dsp.io.android.AndroidFFMPEGLocator;
-import be.tarsos.dsp.io.android.AudioDispatcherFactory;
-import be.tarsos.dsp.mfcc.MFCC;
 import cjh.recorder.R;
 import tooth.util.PositionButtonWrapper;
 import tooth.util.noise.SpectralSubtraction;
-import tooth.util.wav.WavFileWriter;
 import weka.Constant;
 import weka.MakeArffFile;
-
-import static weka.Constant.MFCC_TMP_PATH;
 
 /**
  * Created by admin on 2017/10/12.
@@ -92,8 +63,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     // 缓冲区字节大小
     private static int bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz,
             channelConfig, audioFormat);
-    final static double maxWindowLength = 0.5;
-    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLength / 2);//0.5s;
+    final static double maxWindowLengthInSecond = 0.5;
+    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond);//0.5s;
     // 步长
     private int overlapPercentage = 50;
 
@@ -149,16 +120,18 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         sbAdjWindowSize = (SeekBar) findViewById(R.id.AdjWindowSize);
         assert sbAdjWindowSize != null;
         // 初始化窗口大小
-        int initProgress = (int) ((double) windowLength / (double) sampleRateInHz * 100);
+        int initProgress = (int) ((double) windowLength / (double) sampleRateInHz / maxWindowLengthInSecond * 100);
         sbAdjWindowSize.setProgress(initProgress);
-        txtWindowLength.setText(String.format("%.2fs", progressToWindowSize(initProgress)));
+        txtWindowLength.setText(String.format("%.2fs", progressToWindowSizeInSecond(initProgress)));
         sbAdjWindowSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
-                txtWindowLength.setText(String.format("%.2fs", progressToWindowSize(progress)));
+                txtWindowLength.setText(String.format("%.2fs", progressToWindowSizeInSecond(progress)));
                 // 计算并设置窗口大小
-                windowLength = (int) (sampleRateInHz * progressToWindowSize(progress));
+                windowLength = (int) (sampleRateInHz * progressToWindowSizeInSecond(progress));
+//                保证windowLength的值为偶数
+                windowLength = windowLength % 2 == 0 ? windowLength : windowLength + 1;
                 System.out.println(windowLength);
             }
 
@@ -195,8 +168,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         });
     }
 
-    private double progressToWindowSize(double progress) {
-        return (progress + 1) / 100 * maxWindowLength;
+    private double progressToWindowSizeInSecond(double progress) {
+        return (progress + 1) / 100 * maxWindowLengthInSecond;
     }
 
     @Override
@@ -275,13 +248,19 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             }
             // 消费若干个窗口
             while (signalBuffer.size() > windowLength) {
-                List<Byte> datalist = signalBuffer.subList(0, windowLength);
-                System.out.println(".");
-                MakeArffFile.calculate(datalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
+                List<Byte> rawDatalist = signalBuffer.subList(0, windowLength);
+                List<Integer> numericalDatalist = new ArrayList<>();
+                // 将原始数据转换成数值数据
+                for (int i = 0; i < rawDatalist.size(); i += 2) {
+                    int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
+                    numericalDatalist.add(sig);
+                }
+                MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
                 // 此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
                 for (int i = 0; i < (double) windowLength * (1 - (double) overlapPercentage / 100); i++) {
                     signalBuffer.remove(0);
                 }
+                System.out.println(".");
             }
         }
 
@@ -293,7 +272,6 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             // 原始信号
             JSONArray sigSeq = new JSONArray();
             for (int i = 0; i < totalSignal.size(); i += 2) {
-                // little edian
                 int sig = rawAudioDataToShort(totalSignal.get(i), totalSignal.get(i + 1));
                 signal_16bit[i / 2] = (short) sig;
                 sigSeq.put(sig);
@@ -307,7 +285,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             }
             byte[] buf = ("audio=" + sigSeq.toString() + "&audio_denoise=" + sigSeq_denoise.toString()).getBytes();
 //            URL url = new URL("http://192.168.1.103:5000/audio");
-            URL url = new URL("http://192.168.1.103:5000/audio");
+            URL url = new URL("http://192.168.1.101:5000/audio");
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("POST");
             con.setDoOutput(true);
@@ -322,7 +300,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     }
 
     /*
-     * 将raw数据中的二进制转换为实际的音频信号
+     * 将raw数据中的二进制转换为实际的音频信号 由于默认音频格式为16bit 小端存储 因此这里只使用high和low两位
+     * 如果用其他bit宽度需要修改此函数
      *
      * */
     private int rawAudioDataToShort(byte high, byte low) {

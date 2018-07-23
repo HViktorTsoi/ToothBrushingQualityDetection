@@ -15,6 +15,7 @@ import java.util.concurrent.Exchanger;
 
 /**
  * Created by qizhiping on 2017/10/15.
+ * Edited by cuijiahe on 2018/7/23
  */
 
 public class MakeArffFile {
@@ -80,18 +81,13 @@ public class MakeArffFile {
         }
     }
 
-
-    private static ArrayList<String> _record = new ArrayList<>();
-
-    public static void calculate(List<Byte> datalist, String type, int sampleRateInHz, int channelConfig) {
-        double[] param = new double[datalist.size()];
-        for (int i = 0; i < datalist.size(); i++)
-            param[i] = Double.valueOf(datalist.get(i));
+    public static void calculate(List<Integer> numericalDatalist, List<Byte> rawDatalist, String type, int sampleRateInHz, int channelConfig) {
+        double[] param = new double[numericalDatalist.size()];
+        for (int i = 0; i < numericalDatalist.size(); i++)
+            param[i] = Double.valueOf(numericalDatalist.get(i));
         double[] t_ret = AudioFeature.timedomain(param);
         double[] f_ret = AudioFeature.freqdomain(param);
-        List<float[]> mfcc_ret_batch = AudioFeature.mfccFeature(datalist, sampleRateInHz, channelConfig);
-
-        //String tmp = "";
+        List<float[]> mfcc_ret_batch = AudioFeature.mfccFeature(rawDatalist, sampleRateInHz, channelConfig);
         try {
             writer = new FileWriter(Constant.FILE_PATH, true);
             for (double aT_ret : t_ret) {
@@ -114,23 +110,5 @@ public class MakeArffFile {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
-
-    private static void writeToFile() {
-        if (_record.size() > 20) {
-            try {
-                writer = new FileWriter(Constant.FILE_PATH, true);
-                for (String str : _record) {
-                    writer.write(str);
-                }
-                _record.clear();
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-
 }

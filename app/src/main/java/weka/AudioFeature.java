@@ -51,8 +51,7 @@ public class AudioFeature {
         double kur = mykur.evaluate(rawdata);
         Skewness myske = new Skewness();
         double ske = myske.evaluate(rawdata);
-        double[] tdfeature = {max, min, mean, std, med, q1, q3, iqr, kur, ske};
-        return tdfeature;
+        return new double[]{max, min, mean, std, med, q1, q3, iqr, kur, ske};
     }
 
 
@@ -119,8 +118,7 @@ public class AudioFeature {
         Skewness myske = new Skewness();
         double fske = myske.evaluate(freqrawdata);
 
-        double[] fdfeature = {fmean1, fmean2, fmean3, fmean4, fmean5, fmean6, fmean7, fstd, fmed, fkur, fske, fiqr};
-        return fdfeature;
+        return new double[]{fmean1, fmean2, fmean3, fmean4, fmean5, fmean6, fmean7, fstd, fmed, fkur, fske, fiqr};
     }
 
     public static List<float[]> mfccFeature(List<Byte> datalist, int sampleRateInHz, int channelConfig) {
