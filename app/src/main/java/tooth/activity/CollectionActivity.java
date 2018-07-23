@@ -1,5 +1,6 @@
 package tooth.activity;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -47,6 +48,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private TextView txtWindowLength, txtCurOverlapPercentage;
     private String TAG = "ToothRecord";
     private AudioRecord mRecorder = null;
+    private ProgressDialog waitingDialog;
     // 正在记录的位置类型
     private int recordFlag = 0;
     public boolean isRecording = false;
@@ -63,10 +65,13 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     // 缓冲区字节大小
     private static int bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz,
             channelConfig, audioFormat);
+    // 最大可调整窗口长度
     final static double maxWindowLengthInSecond = 0.5;
-    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond);//0.5s;
+    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 5;//0.1s;
     // 步长
     private int overlapPercentage = 50;
+    // 噪声消除器
+    SpectralSubtraction spectralSubstraction;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -186,26 +191,23 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             Button currentButton = positionButtonWrapper.getButton();
             // 如果未开始录制 则开始采集对应类别的信息 否则停止
             if (recordFlag == 0) {
-                recordFlag = positionButtonWrapper.getButtonLogicID();
                 currentButton.setText("停止");
                 currentButton.setBackgroundColor(getResources().getColor(R.color.light_green));
                 sbAdjWindowSize.setEnabled(false);
+                recordFlag = positionButtonWrapper.getButtonLogicID();
                 startRecording();
             } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
-                recordFlag = 0;
                 sbAdjWindowSize.setEnabled(true);
                 currentButton.setText(positionButtonWrapper.getLabel());
                 currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
                 stopRecording();
+                recordFlag = 0;
             }
         }
     }
 
     public void startRecording() {
         isRecording = true;
-        // 实例化录音
-        mRecorder = new AudioRecord(audioSource, sampleRateInHz,
-                channelConfig, audioFormat, bufferSizeInBytes);
         Log.i(TAG, "startRecording");
         // 开始录音,计算并写入
         new Thread(new RecordThread()).start();
@@ -222,11 +224,77 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     class RecordThread implements Runnable {
         @Override
         public void run() {
-            mRecorder.startRecording();
+            // 录制并计算噪声特征
+            recordAndCalcNoiseFeat();
+            // 录制正常声信号
             recordAndProcessData();
             System.out.println("Data Written.");
         }
     }
+
+    class NotifyNoiseRemainTimeThread implements Runnable {
+
+        private Double remainTime;
+
+        public NotifyNoiseRemainTimeThread(Double remainTime) {
+            this.remainTime = remainTime;
+        }
+
+        @Override
+        public void run() {
+            waitingDialog.setMessage(String.format("剩余时间: %.1fs", remainTime));
+        }
+    }
+
+    /*
+     * 计算噪声特征并初始化噪声消除类
+     * */
+    private void recordAndCalcNoiseFeat() {
+        final byte[] inputSignal = new byte[bufferSizeInBytes];
+        List<Short> noiseSignal = new ArrayList<>();
+        // 噪声信号采集时长
+        int noiseLengthInSecond = 10;
+        // 读取噪声信号 读取 sampleRateInHz/2*n秒的数据
+        // 设置等待窗口
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                waitingDialog = new ProgressDialog(CollectionActivity.this);
+                waitingDialog.setTitle("请保持安静,正在采集噪声数据");
+                waitingDialog.setMessage("请等待...");
+                waitingDialog.setIndeterminate(true);
+                waitingDialog.setCancelable(false);
+                waitingDialog.show();
+            }
+        });
+        // 实例化录音
+        mRecorder = new AudioRecord(audioSource, sampleRateInHz,
+                channelConfig, audioFormat, bufferSizeInBytes);
+        mRecorder.startRecording();
+        while (noiseSignal.size() < sampleRateInHz * noiseLengthInSecond) {
+            final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
+            assert readsize % 2 == 0;
+            // 计算真实数值
+            for (int i = 0; i < readsize; i += 2) {
+                noiseSignal.add((short) rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+            }
+            System.out.println(noiseSignal.size() / readsize);
+            if (noiseSignal.size() / readsize % 10 == 0) {
+                // 在界面上显示噪声录制的进度
+                double progrss = noiseLengthInSecond * (1 - (double) noiseSignal.size() / (sampleRateInHz * noiseLengthInSecond));
+                progrss = progrss < 0.1 ? 0.1 : progrss;
+                runOnUiThread(new NotifyNoiseRemainTimeThread(progrss));
+            }
+        }
+//        mRecorder.stop();
+//        mRecorder.release();
+        System.out.println(noiseSignal.size());
+        spectralSubstraction = new SpectralSubtraction(noiseSignal, 1024, noiseLengthInSecond * sampleRateInHz / 1024 / 2);
+        waitingDialog.dismiss();
+        // 重置录音机
+        System.out.println("噪声记录完毕");
+    }
+
 
     /**
      * 这里将数据写入文件，但是并不能播放，因为AudioRecord获得的音频是原始的裸音频，
@@ -239,9 +307,17 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         ArrayList<Byte> signalBuffer = new ArrayList<>();
         ArrayList<Byte> totalSignal = new ArrayList<>();
         System.out.println("windowLength:" + windowLength);
+//        mRecorder = new AudioRecord(audioSource, sampleRateInHz,
+//                channelConfig, audioFormat, bufferSizeInBytes * 10);
+//        mRecorder.startRecording();
+        // 舍弃前面5帧率
+        int ignoreFrameCounter = 10;
         while (isRecording) {
             final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
-
+            if (ignoreFrameCounter > 0) {
+                ignoreFrameCounter--;
+                continue;
+            }
             for (byte anInputSignal : inputSignal) {
                 signalBuffer.add(anInputSignal);
                 totalSignal.add(anInputSignal);
@@ -268,19 +344,20 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         try {
 
             // short类型的signal
-            short[] signal_16bit = new short[totalSignal.size() / 2];
+            List<Short> signal_16bit = new ArrayList<>();
             // 原始信号
             JSONArray sigSeq = new JSONArray();
             for (int i = 0; i < totalSignal.size(); i += 2) {
                 int sig = rawAudioDataToShort(totalSignal.get(i), totalSignal.get(i + 1));
-                signal_16bit[i / 2] = (short) sig;
+                signal_16bit.add((short) sig);
                 sigSeq.put(sig);
             }
             // 降噪之后的信号
-            SpectralSubtraction spectralSubstraction = new SpectralSubtraction(signal_16bit, 1024, 30);
-            signal_16bit = spectralSubstraction.noiseSubtraction();
+//            SpectralSubtraction spectralSubstractionTest = new SpectralSubtraction(signal_16bit, 1024, 30);
+            this.spectralSubstraction.setSignal(signal_16bit);
+            short[] signal_16bit_denoise = spectralSubstraction.noiseSubtraction();
             JSONArray sigSeq_denoise = new JSONArray();
-            for (short sig : signal_16bit) {
+            for (short sig : signal_16bit_denoise) {
                 sigSeq_denoise.put(sig);
             }
             byte[] buf = ("audio=" + sigSeq.toString() + "&audio_denoise=" + sigSeq_denoise.toString()).getBytes();

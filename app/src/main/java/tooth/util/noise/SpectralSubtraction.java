@@ -3,6 +3,7 @@ package tooth.util.noise;
 import android.util.Log;
 
 import java.io.FileOutputStream;
+import java.util.List;
 
 
 /**
@@ -28,29 +29,27 @@ public class SpectralSubtraction {
     private static double noiseEnergy = 0;
     private static DoubleFFT_1D FFT1D;
 
-    public SpectralSubtraction(short[] buffer, int frameSize, double noiseLength) {
+    public SpectralSubtraction(List<Short> buffer, int frameSize, double noiseLength) {
         this.noiseSignalLength = noiseLength;
         this.frameSize = frameSize;
         frameAdv = frameSize / 2;
-        signal = new double[buffer.length];
-        for (int i = 0; i < buffer.length; i++) {
-            signal[i] = (double) buffer[i];
+        signal = new double[buffer.size()];
+        for (int i = 0; i < buffer.size(); i++) {
+            signal[i] = (double) buffer.get(i);
             signal[i] = signal[i] / 32768.0;
-            //Log.e("ss",String.valueOf(signal[i]));
         }
         result = new short[signal.length];
-        //Log.e("ss",String.valueOf(signal.length));
         noiseAverage(signal);
 
     }
 
-    public void setSignal(short[] input) {
-        this.signal = new double[input.length];
-        for (int i = 0; i < input.length; i++) {
-            this.signal[i] = (double) input[i];
+    public void setSignal(List<Short> input) {
+        this.signal = new double[input.size()];
+        for (int i = 0; i < input.size(); i++) {
+            this.signal[i] = (double) input.get(i);
             this.signal[i] = this.signal[i] / 32768.0;
         }
-        this.result = new short[input.length];
+        this.result = new short[input.size()];
     }
 
 
@@ -90,6 +89,7 @@ public class SpectralSubtraction {
             specNoise[i] = specNoise[i] / dynamicNoiseSignalLength;
             noiseEnergy = noiseEnergy + specNoise[i];
         }
+        System.out.println("Noise Energy: " + noiseEnergy);
         return noiseEnergy;
     }
 
@@ -202,7 +202,6 @@ public class SpectralSubtraction {
         double snr, sumY = 0;
         double beta, alpha;
         int pointer = 0;
-        double noise = thisnoiseAverage;
         specY = new double[frameSize];
         timeY = new double[frameSize];
         phaseY = new double[frameSize];
@@ -255,7 +254,7 @@ public class SpectralSubtraction {
                 sumY = sumY +specY[a];
                 //test1 = test1+phaseY[a];
             }*/
-            snr = sumY / noise;
+            snr = sumY / thisnoiseAverage;
             //Log.e("ss",String.valueOf(sumY));
             test1 = 0;
             //Log.e("ss", String.valueOf(snr));
