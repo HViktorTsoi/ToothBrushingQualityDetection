@@ -64,7 +64,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private static int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
     // 缓冲区字节大小
     private static int bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz,
-            channelConfig, audioFormat);
+            channelConfig, audioFormat) * 2;
     // 最大可调整窗口长度
     final static double maxWindowLengthInSecond = 0.5;
     private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 5;//0.1s;
@@ -256,7 +256,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         final byte[] inputSignal = new byte[bufferSizeInBytes];
         List<Short> noiseSignal = new ArrayList<>();
         // 噪声信号采集时长
-        int noiseLengthInSecond = 5;
+        int noiseLengthInSecond = 10;
         // 读取噪声信号 读取 sampleRateInHz/2*n秒的数据
         // 设置等待窗口
         runOnUiThread(new Runnable() {
@@ -307,14 +307,12 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private void recordAndProcessData() {
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
         final byte[] inputSignal = new byte[bufferSizeInBytes];
-        ArrayList<Byte> signalBuffer = new ArrayList<>();
         ArrayList<Byte> totalSignal = new ArrayList<>();
+        ArrayList<Byte> signalBuffer = new ArrayList<>();
         System.out.println("windowLength:" + windowLength);
-//        mRecorder = new AudioRecord(audioSource, sampleRateInHz,
-//                channelConfig, audioFormat, bufferSizeInBytes * 10);
-//        mRecorder.startRecording();
         // 舍弃前面若干帧
-        int ignoreFrameCounter = 1;
+        int ignoreFrameCounter = 5;
+        int windowStart = 0;
         while (isRecording) {
             final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
             if (ignoreFrameCounter > 0) {
@@ -323,28 +321,54 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             }
             for (byte anInputSignal : inputSignal) {
                 totalSignal.add(anInputSignal);
-                signalBuffer.add(anInputSignal);
+//                signalBuffer.add(anInputSignal);
             }
-
+            // 清除噪声
+            List<Short> inputSignal_16bit = new ArrayList<>();
+            // 计算真实数值
+            for (int i = 0; i < inputSignal.length; i += 2) {
+                inputSignal_16bit.add((short) rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+            }
+            spectralSubstraction.setSignal(inputSignal_16bit);
+            // 对inputSignal进行降噪
+            short[] inputSignal_16bit_denoise = spectralSubstraction.noiseSubtraction();
+            for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
+                signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
+            }
+            // 对采集进来的整体音频信号进行处理 消费若干个窗口
+            while (windowStart + windowLength < signalBuffer.size()) {
+                List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
+                List<Integer> numericalDatalist = new ArrayList<>();
+//             将原始数据转换成数值数据
+                for (int i = 0; i < rawDatalist.size(); i += 2) {
+                    int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
+                    numericalDatalist.add(sig);
+                }
+                MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
+//             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
+                windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
+                System.out.println("Remain:" + (signalBuffer.size() - windowStart));
+            }
         }
-        // 清除噪声
-        List<Short> inputSignal_16bit = new ArrayList<>();
-        // 计算真实数值
-        for (int i = 0; i < signalBuffer.size(); i += 2) {
-            inputSignal_16bit.add((short) rawAudioDataToShort(signalBuffer.get(i), signalBuffer.get(i + 1)));
-        }
-        spectralSubstraction.setSignal(inputSignal_16bit);
-        // 对inputSignal进行降噪
-        short[] inputSignal_16bit_denoise = spectralSubstraction.noiseSubtraction();
-        // 再由真实数值转化为byte数组
-        signalBuffer.clear();
-        for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
-            signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
-        }
-
-//        // 对采集进来的整体音频信号进行处理 消费若干个窗口
-//        while (signalBuffer.size() > windowLength) {
-//            List<Byte> rawDatalist = signalBuffer.subList(0, windowLength);
+//        // 清除噪声
+//        List<Short> inputSignal_16bit = new ArrayList<>();
+//        // 计算真实数值
+//        for (int i = 0; i < signalBuffer.size(); i += 2) {
+//            inputSignal_16bit.add((short) rawAudioDataToShort(signalBuffer.get(i), signalBuffer.get(i + 1)));
+//        }
+//        spectralSubstraction.setSignal(inputSignal_16bit);
+//        // 对inputSignal进行降噪
+//        short[] inputSignal_16bit_denoise = spectralSubstraction.noiseSubtraction();
+//        // 再由真实数值转化为byte数组
+//        signalBuffer.clear();
+//        for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
+//            signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
+//        }
+//        int windowStart = 0;
+////        // 对采集进来的整体音频信号进行处理 消费若干个窗口
+////        while (signalBuffer.size() > windowLength) {
+//        while (windowStart + windowLength < signalBuffer.size()) {
+//            List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
 //            List<Integer> numericalDatalist = new ArrayList<>();
 ////             将原始数据转换成数值数据
 //            for (int i = 0; i < rawDatalist.size(); i += 2) {
@@ -353,10 +377,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 //            }
 //            MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
 ////             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-//            for (int i = 0; i < (double) windowLength * (1 - (double) overlapPercentage / 100); i++) {
-//                signalBuffer.remove(0);
-//            }
-//            System.out.println("Remain:" + signalBuffer.size());
+//            windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
+//            System.out.println("Remain:" + (signalBuffer.size() - windowStart));
 //        }
 
         // 发送请求
@@ -369,15 +391,10 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             for (int i = 0; i < totalSignal.size(); i += 2) {
                 sigSeq.put(rawAudioDataToShort(totalSignal.get(i), totalSignal.get(i + 1)));
             }
-            for (int i = 0; i < signalBuffer.size(); i += 2) {
+            for (int i = 0; i + 2 < signalBuffer.size(); i += 2) {
                 sigSeq_denoise.put((short) rawAudioDataToShort(signalBuffer.get(i), signalBuffer.get(i + 1)));
             }
-            // 降噪之后的信号
-//            SpectralSubtraction spectralSubstractionTest = new SpectralSubtraction(signal_16bit, 1024, 30);
-//            this.spectralSubstraction.setSignal(signal_16bit);
-//            short[] signal_16bit_denoise = spectralSubstraction.noiseSubtraction();
             byte[] buf = ("audio=" + sigSeq.toString() + "&audio_denoise=" + sigSeq_denoise.toString()).getBytes();
-//            URL url = new URL("http://192.168.1.103:5000/audio");
             URL url = new URL("http://192.168.1.101:5000/audio");
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("POST");
