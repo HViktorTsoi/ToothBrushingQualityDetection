@@ -13,12 +13,6 @@
         android:layout_height="40dp"
         android:orientation="horizontal">
 
-        <SeekBar
-            android:id="@+id/AdjWindowSize"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="4" />
-
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -32,18 +26,19 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center" />
+
+        <SeekBar
+            android:id="@+id/AdjWindowSize"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="4" />
+
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:orientation="horizontal">
-
-        <SeekBar
-            android:id="@+id/AdjOverlapPecentage"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="4" />
 
         <TextView
             android:layout_width="0dp"
@@ -58,12 +53,44 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center" />
+
+        <SeekBar
+            android:id="@+id/AdjOverlapPecentage"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="4" />
+
     </LinearLayout>
 
     <LinearLayout
-        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:labelFor="@id/AdjNoiseRecordTime"
+            android:text="@string/noise_record_time" />
+
+        <EditText
+            android:id="@+id/AdjNoiseRecordTime"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="10dp"
+            android:layout_weight="2"
+            android:inputType="number"
+            android:textAlignment="center" />
+
+
+    </LinearLayout>
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
         android:orientation="horizontal">
 
         <Button
@@ -313,66 +340,66 @@
             android:textSize="18sp" />
     </LinearLayout>
 
-    <Button
-        android:id="@+id/button_test"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_margin="10dp"
-        android:background="@drawable/selector_bg"
-        android:padding="10dp"
-        android:text="测试"
-        android:textSize="18sp" />
+    <!--<Button-->
+    <!--android:id="@+id/button_test"-->
+    <!--android:layout_width="wrap_content"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:layout_gravity="center"-->
+    <!--android:layout_margin="10dp"-->
+    <!--android:background="@drawable/selector_bg"-->
+    <!--android:padding="10dp"-->
+    <!--android:text="测试"-->
+    <!--android:textSize="18sp" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Tips:"
-        android:textColor="@android:color/black"
-        android:textSize="14sp" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:text="Tips:"-->
+    <!--android:textColor="@android:color/black"-->
+    <!--android:textSize="14sp" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/up" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:text="@string/up" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/down" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:text="@string/down" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/left" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:text="@string/left" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/right" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:text="@string/right" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/back" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:text="@string/back" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/front" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:text="@string/front" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/outer" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:text="@string/outer" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/inner" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:text="@string/inner" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="20dp" />
+    <!--<TextView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="20dp" />-->
 
 </LinearLayout>

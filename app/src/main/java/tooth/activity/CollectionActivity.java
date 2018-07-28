@@ -6,11 +6,17 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Debug;
+import android.os.Process;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.NumberPicker;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -45,9 +51,9 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private Button button_test;
     private MenuItem item1, item2, item3, item4;
     private SeekBar sbAdjWindowSize, sbAdjOverlapPercentage;
+    private EditText txtAdjNoiseRecordTime;
     private TextView txtWindowLength, txtCurOverlapPercentage;
     private String TAG = "ToothRecord";
-    private AudioRecord mRecorder = null;
     private ProgressDialog waitingDialog;
     // 正在记录的位置类型
     private int recordFlag = 0;
@@ -64,14 +70,16 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private static int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
     // 缓冲区字节大小
     private static int bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz,
-            channelConfig, audioFormat) * 2;
+            channelConfig, audioFormat);
     // 最大可调整窗口长度
     final static double maxWindowLengthInSecond = 0.5;
-    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 5;//0.1s;
+    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 2;//0.5/2s;
     // 步长
     private int overlapPercentage = 50;
     // 噪声消除器
     SpectralSubtraction spectralSubstraction;
+    // 噪声信号采集时长
+    private int noiseLengthInSecond = 5;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,22 +125,25 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     new PositionButtonWrapper((Button) findViewById(buttonID), positionClassButtonMap.size() + 1));
             positionClassButtonMap.get(buttonID).getButton().setOnClickListener(this);
         }
-        button_test = (Button) findViewById(R.id.button_test);
-        assert button_test != null;
-        button_test.setOnClickListener(this);
+//        button_test = (Button) findViewById(R.id.button_test);
+//        assert button_test != null;
+//        button_test.setOnClickListener(this);
 //        初始化seekbar 调整窗口大小
         txtWindowLength = (TextView) findViewById(R.id.txtCurWindowSize);
         sbAdjWindowSize = (SeekBar) findViewById(R.id.AdjWindowSize);
         assert sbAdjWindowSize != null;
         // 初始化窗口大小
         int initProgress = (int) ((double) windowLength / (double) sampleRateInHz / maxWindowLengthInSecond * 100);
+        initProgress = discretization(initProgress, 20);
         sbAdjWindowSize.setProgress(initProgress);
-        txtWindowLength.setText(String.format("%.2fs", progressToWindowSizeInSecond(initProgress)));
+        txtWindowLength.setText(String.format("%.1fs", progressToWindowSizeInSecond(initProgress)));
         sbAdjWindowSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
-                txtWindowLength.setText(String.format("%.2fs", progressToWindowSizeInSecond(progress)));
+                // 变为5档 即除以20之后取整
+                progress = discretization(progress, 20);
+                txtWindowLength.setText(String.format("%.1fs", progressToWindowSizeInSecond(progress)));
                 // 计算并设置窗口大小
                 windowLength = (int) (sampleRateInHz * progressToWindowSizeInSecond(progress));
 //                保证windowLength的值为偶数
@@ -156,7 +167,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         sbAdjOverlapPercentage.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
-                overlapPercentage = progress;
+                overlapPercentage = discretization(progress, 10);
                 txtCurOverlapPercentage.setText(String.format("%d%%", overlapPercentage));
                 System.out.println(overlapPercentage);
             }
@@ -171,67 +182,120 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 
             }
         });
+        txtAdjNoiseRecordTime = (EditText) findViewById(R.id.AdjNoiseRecordTime);
+        assert txtAdjNoiseRecordTime != null;
+        txtAdjNoiseRecordTime.setText(String.valueOf(noiseLengthInSecond));
+        txtAdjNoiseRecordTime.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (!s.toString().equals("")) {
+                    noiseLengthInSecond = Integer.valueOf(s.toString());
+                }
+                System.out.println(noiseLengthInSecond);
+            }
+        });
+        sbAdjWindowSize.setFocusable(true);
+        sbAdjWindowSize.requestFocus();
     }
 
+    /*
+     * 将整数的progress值转换成以秒为单位的窗口长度
+     * */
     private double progressToWindowSizeInSecond(double progress) {
         return (progress + 1) / 100 * maxWindowLengthInSecond;
+    }
+
+    /*
+     * 将连续数值分离散档
+     * */
+    private int discretization(int num, int param) {
+        return (int) (num / param) * param;
     }
 
     @Override
     public void onClick(View v) {
 
-        if (v.getId() == R.id.button_test) {
-            if (recordFlag == 0) {
-                Intent intent = new Intent(CollectionActivity.this, DisplayActivity.class);
-                startActivity(intent);
-            }
-        } else {
-            // 获取当前点击的button信息
-            PositionButtonWrapper positionButtonWrapper = positionClassButtonMap.get(v.getId());
-            Button currentButton = positionButtonWrapper.getButton();
-            // 如果未开始录制 则开始采集对应类别的信息 否则停止
-            if (recordFlag == 0) {
-                currentButton.setText("停止");
-                currentButton.setBackgroundColor(getResources().getColor(R.color.light_green));
-                sbAdjWindowSize.setEnabled(false);
-                recordFlag = positionButtonWrapper.getButtonLogicID();
-                startRecording();
-            } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
-                sbAdjWindowSize.setEnabled(true);
-                currentButton.setText(positionButtonWrapper.getLabel());
-                currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
-                stopRecording();
-                // recordFlag要在录音结束后置0
-//                recordFlag = 0;
-            }
+//        if (v.getId() == R.id.button_test) {
+//            if (recordFlag == 0) {
+//                Intent intent = new Intent(CollectionActivity.this, DisplayActivity.class);
+//                startActivity(intent);
+//            }
+//        } else {
+        // 获取当前点击的button信息
+        PositionButtonWrapper positionButtonWrapper = positionClassButtonMap.get(v.getId());
+        Button currentButton = positionButtonWrapper.getButton();
+        // 如果未开始录制 则开始采集对应类别的信息 否则停止
+        if (recordFlag == 0) {
+            startRecording(positionButtonWrapper);
+        } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
+            currentButton.setText("处理中");
+            currentButton.setBackgroundColor(getResources().getColor(R.color.blue));
+            stopRecording();
         }
+//        }
     }
 
-    public void startRecording() {
+    public void startRecording(PositionButtonWrapper currentButton) {
         isRecording = true;
         Log.i(TAG, "startRecording");
         // 开始录音,计算并写入
-        new Thread(new RecordThread()).start();
+        Thread recordThread = new Thread(new RecordThread(currentButton));
+        recordThread.start();
     }
 
     public void stopRecording() {
         isRecording = false;
-        mRecorder.stop();
-        mRecorder.release();
-        mRecorder = null;
         Log.i(TAG, "stopRecording");
     }
 
     class RecordThread implements Runnable {
+        PositionButtonWrapper currentButton;
+
+        public RecordThread(PositionButtonWrapper currentButton) {
+            this.currentButton = currentButton;
+        }
+
         @Override
         public void run() {
+            recordFlag = currentButton.getButtonLogicID();
+            // 设置UI
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    sbAdjWindowSize.setEnabled(false);
+                    sbAdjOverlapPercentage.setEnabled(false);
+                    txtAdjNoiseRecordTime.setEnabled(false);
+                    currentButton.getButton().setText("停止");
+                    currentButton.getButton().setBackgroundColor(getResources().getColor(R.color.light_green));
+                }
+            });
+            Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
             // 录制并计算噪声特征
             recordAndCalcNoiseFeat();
             // 录制正常声信号
-            recordAndProcessData();
+            recordAndProcessData(currentButton);
             // recordFlag要在录音结束后置0
-            recordFlag = 0;
             System.out.println("Data Written.");
+            // 设置UI
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    sbAdjWindowSize.setEnabled(true);
+                    sbAdjOverlapPercentage.setEnabled(true);
+                    txtAdjNoiseRecordTime.setEnabled(true);
+                    currentButton.getButton().setText(currentButton.getLabel());
+                    currentButton.getButton().setBackgroundColor(getResources().getColor(R.color.gray));
+                }
+            });
+            recordFlag = 0;
         }
     }
 
@@ -255,15 +319,13 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private void recordAndCalcNoiseFeat() {
         final byte[] inputSignal = new byte[bufferSizeInBytes];
         List<Short> noiseSignal = new ArrayList<>();
-        // 噪声信号采集时长
-        int noiseLengthInSecond = 10;
         // 读取噪声信号 读取 sampleRateInHz/2*n秒的数据
         // 设置等待窗口
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 waitingDialog = new ProgressDialog(CollectionActivity.this);
-                waitingDialog.setTitle("请保持安静,正在采集噪声数据");
+                waitingDialog.setTitle("请保持安静,正在采集环境噪声数据");
                 waitingDialog.setMessage("请等待...");
                 waitingDialog.setIndeterminate(true);
                 waitingDialog.setCancelable(false);
@@ -271,7 +333,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             }
         });
         // 实例化录音
-        mRecorder = new AudioRecord(audioSource, sampleRateInHz,
+        AudioRecord mRecorder = new AudioRecord(audioSource, sampleRateInHz,
                 channelConfig, audioFormat, bufferSizeInBytes);
         mRecorder.startRecording();
         while (noiseSignal.size() < sampleRateInHz * noiseLengthInSecond) {
@@ -289,12 +351,12 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 runOnUiThread(new NotifyNoiseRemainTimeThread(progrss));
             }
         }
-//        mRecorder.stop();
-//        mRecorder.release();
         System.out.println(noiseSignal.size());
         spectralSubstraction = new SpectralSubtraction(noiseSignal, 1024, noiseLengthInSecond * sampleRateInHz / 1024 / 2);
         waitingDialog.dismiss();
         // 重置录音机
+        mRecorder.stop();
+        mRecorder.release();
         System.out.println("噪声记录完毕");
     }
 
@@ -304,25 +366,30 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
      * 如果需要播放就必须加入一些格式或者编码的头信息。但是这样的好处就是你可以对音频的 裸数据进行处理，比如你要做一个爱说话的TOM
      * 猫在这里就进行音频的处理，然后重新封装 所以说这样得到的音频比较容易做一些音频的处理。
      */
-    private void recordAndProcessData() {
+    private void recordAndProcessData(PositionButtonWrapper currentButtonWrapper) {
+        final Button currentButton = currentButtonWrapper.getButton();
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
         final byte[] inputSignal = new byte[bufferSizeInBytes];
-        ArrayList<Byte> totalSignal = new ArrayList<>();
+//        ArrayList<Byte> totalSignal = new ArrayList<>();
         ArrayList<Byte> signalBuffer = new ArrayList<>();
         System.out.println("windowLength:" + windowLength);
         // 舍弃前面若干帧
         int ignoreFrameCounter = 5;
         int windowStart = 0;
+        // 实例化录音 大小为接近windowLength的read整数
+        AudioRecord mRecorder = new AudioRecord(audioSource, sampleRateInHz,
+                channelConfig, audioFormat, 4 * bufferSizeInBytes);
+        mRecorder.startRecording();
         while (isRecording) {
             final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
             if (ignoreFrameCounter > 0) {
                 ignoreFrameCounter--;
                 continue;
             }
-            for (byte anInputSignal : inputSignal) {
-                totalSignal.add(anInputSignal);
-//                signalBuffer.add(anInputSignal);
-            }
+//            for (byte anInputSignal : inputSignal) {
+//                totalSignal.add(anInputSignal);
+////                signalBuffer.add(anInputSignal);
+//            }
             // 清除噪声
             List<Short> inputSignal_16bit = new ArrayList<>();
             // 计算真实数值
@@ -335,21 +402,22 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
                 signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
             }
-            // 对采集进来的整体音频信号进行处理 消费若干个窗口
-            while (windowStart + windowLength < signalBuffer.size()) {
-                List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
-                List<Integer> numericalDatalist = new ArrayList<>();
-//             将原始数据转换成数值数据
-                for (int i = 0; i < rawDatalist.size(); i += 2) {
-                    int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
-                    numericalDatalist.add(sig);
-                }
-                MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
-//             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-                windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
-                System.out.println("Remain:" + (signalBuffer.size() - windowStart));
-            }
+//            // 对采集进来的整体音频信号进行处理 消费若干个窗口
+//            while (windowStart + windowLength < signalBuffer.size()) {
+//                List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
+//                List<Integer> numericalDatalist = new ArrayList<>();
+////             将原始数据转换成数值数据
+//                for (int i = 0; i < rawDatalist.size(); i += 2) {
+//                    int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
+//                    numericalDatalist.add(sig);
+//                }
+//                MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
+////             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
+//                windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
+//                System.out.println("Remain:" + (signalBuffer.size() - windowStart));
+//            }
         }
+//        System.out.println("处理噪声");
 //        // 清除噪声
 //        List<Short> inputSignal_16bit = new ArrayList<>();
 //        // 计算真实数值
@@ -364,49 +432,60 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 //        for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
 //            signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
 //        }
-//        int windowStart = 0;
-////        // 对采集进来的整体音频信号进行处理 消费若干个窗口
-////        while (signalBuffer.size() > windowLength) {
-//        while (windowStart + windowLength < signalBuffer.size()) {
-//            List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
-//            List<Integer> numericalDatalist = new ArrayList<>();
-////             将原始数据转换成数值数据
-//            for (int i = 0; i < rawDatalist.size(); i += 2) {
-//                int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
-//                numericalDatalist.add(sig);
-//            }
-//            MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
-////             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-//            windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
-//            System.out.println("Remain:" + (signalBuffer.size() - windowStart));
-//        }
-
-        // 发送请求
-        try {
-
-            // 原始信号
-            JSONArray sigSeq = new JSONArray();
-            JSONArray sigSeq_denoise = new JSONArray();
-            JSONArray sigSeq_denoise_origin = new JSONArray();
-            for (int i = 0; i < totalSignal.size(); i += 2) {
-                sigSeq.put(rawAudioDataToShort(totalSignal.get(i), totalSignal.get(i + 1)));
+        System.out.println("计算信号特征");
+//        // 对采集进来的整体音频信号进行处理 消费若干个窗口
+        while (windowStart + windowLength < signalBuffer.size()) {
+            List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
+            List<Integer> numericalDatalist = new ArrayList<>();
+//             将原始数据转换成数值数据
+            for (int i = 0; i + 2 < rawDatalist.size(); i += 2) {
+                int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
+                numericalDatalist.add(sig);
             }
-            for (int i = 0; i + 2 < signalBuffer.size(); i += 2) {
-                sigSeq_denoise.put((short) rawAudioDataToShort(signalBuffer.get(i), signalBuffer.get(i + 1)));
-            }
-            byte[] buf = ("audio=" + sigSeq.toString() + "&audio_denoise=" + sigSeq_denoise.toString()).getBytes();
-            URL url = new URL("http://192.168.1.101:5000/audio");
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("POST");
-            con.setDoOutput(true);
-            OutputStream out = con.getOutputStream();
-            out.write(buf);
-            out.close();
-            int responseCode = con.getResponseCode();
+            MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
+//             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
+            windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
+            System.out.println("Remain:" + (signalBuffer.size() - windowStart));
+            final double remainPercentage = (double) (signalBuffer.size() - windowStart) / signalBuffer.size() * 100;
+            if (remainPercentage - (int) remainPercentage < 0.5) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        currentButton.setText(String.format("%.1f%%", remainPercentage));
+                    }
+                });
 
-        } catch (IOException e) {
-            e.printStackTrace();
+            }
         }
+        // 停止并释放录音实例
+        mRecorder.stop();
+        mRecorder.release();
+        // 发送请求
+//        try {
+//
+//            // 原始信号
+//            JSONArray sigSeq = new JSONArray();
+//            JSONArray sigSeq_denoise = new JSONArray();
+//            JSONArray sigSeq_denoise_origin = new JSONArray();
+//            for (int i = 0; i < totalSignal.size(); i += 2) {
+//                sigSeq.put(rawAudioDataToShort(totalSignal.get(i), totalSignal.get(i + 1)));
+//            }
+//            for (int i = 0; i + 2 < signalBuffer.size(); i += 2) {
+//                sigSeq_denoise.put((short) rawAudioDataToShort(signalBuffer.get(i), signalBuffer.get(i + 1)));
+//            }
+//            byte[] buf = ("audio=" + sigSeq.toString() + "&audio_denoise=" + sigSeq_denoise.toString()).getBytes();
+//            URL url = new URL("http://192.168.1.101:5000/audio");
+//            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+//            con.setRequestMethod("POST");
+//            con.setDoOutput(true);
+//            OutputStream out = con.getOutputStream();
+//            out.write(buf);
+//            out.close();
+//            int responseCode = con.getResponseCode();
+//
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     /*

@@ -1,5 +1,7 @@
 package weka;
 
+import android.os.Debug;
+import android.os.Process;
 import android.util.Log;
 
 import java.io.File;
@@ -22,6 +24,9 @@ public class MakeArffFile {
 
 
     private static FileWriter writer;
+    private static List<float[]> mfcc_ret_batch;
+    private static double[] t_ret;
+    private static double[] f_ret;
 
     public static void initArffFile() {
         try {
@@ -36,28 +41,28 @@ public class MakeArffFile {
             if (!flag) {
                 writer.write("@relation mfcc_td_fd\n");
                 writer.write("\n");
-                writer.write("@attribute bMax numeric\n");
-                writer.write("@attribute bMin numeric\n");
-                writer.write("@attribute bMean numeric\n");
-                writer.write("@attribute bSTD numeric\n");
-                writer.write("@attribute bMed numeric\n");
-                writer.write("@attribute bKur numeric\n");
-                writer.write("@attribute bSke numeric\n");
-                writer.write("@attribute bQ1 numeric\n");
-                writer.write("@attribute bQ3 numeric\n");
-                writer.write("@attribute bIQR numeric\n");
-                writer.write("@attribute bFMean1 numeric\n");
-                writer.write("@attribute bFMean2 numeric\n");
-                writer.write("@attribute bFMean3 numeric\n");
-                writer.write("@attribute bFMean4 numeric\n");
-                writer.write("@attribute bFMean5 numeric\n");
-                writer.write("@attribute bFMean6 numeric\n");
-                writer.write("@attribute bFMean7 numeric\n");
-                writer.write("@attribute bFSD numeric\n");
-                writer.write("@attribute bFMed numeric\n");
-                writer.write("@attribute bFKur numeric\n");
-                writer.write("@attribute bFSke numeric\n");
-                writer.write("@attribute bFIqr numeric\n");
+                writer.write("@attribute Max numeric\n");
+                writer.write("@attribute Min numeric\n");
+                writer.write("@attribute Mean numeric\n");
+                writer.write("@attribute STD numeric\n");
+                writer.write("@attribute Med numeric\n");
+                writer.write("@attribute Kur numeric\n");
+                writer.write("@attribute Ske numeric\n");
+                writer.write("@attribute Q1 numeric\n");
+                writer.write("@attribute Q3 numeric\n");
+                writer.write("@attribute IQR numeric\n");
+                writer.write("@attribute FMean1 numeric\n");
+                writer.write("@attribute FMean2 numeric\n");
+                writer.write("@attribute FMean3 numeric\n");
+                writer.write("@attribute FMean4 numeric\n");
+                writer.write("@attribute FMean5 numeric\n");
+                writer.write("@attribute FMean6 numeric\n");
+                writer.write("@attribute FMean7 numeric\n");
+                writer.write("@attribute FSD numeric\n");
+                writer.write("@attribute FMed numeric\n");
+                writer.write("@attribute FKur numeric\n");
+                writer.write("@attribute FSke numeric\n");
+                writer.write("@attribute FIqr numeric\n");
                 writer.write("@attribute MFCC1 numeric\n");
                 writer.write("@attribute MFCC2 numeric\n");
                 writer.write("@attribute MFCC3 numeric\n");
@@ -81,13 +86,35 @@ public class MakeArffFile {
         }
     }
 
-    public static void calculate(List<Integer> numericalDatalist, List<Byte> rawDatalist, String type, int sampleRateInHz, int channelConfig) {
-        double[] param = new double[numericalDatalist.size()];
+    public static void calculate(List<Integer> numericalDatalist, final List<Byte> rawDatalist, String type, final int sampleRateInHz, final int channelConfig) {
+        final double[] param = new double[numericalDatalist.size()];
         for (int i = 0; i < numericalDatalist.size(); i++)
             param[i] = Double.valueOf(numericalDatalist.get(i));
-        double[] t_ret = AudioFeature.timedomain(param);
-        double[] f_ret = AudioFeature.freqdomain(param);
-        List<float[]> mfcc_ret_batch = AudioFeature.mfccFeature(rawDatalist, sampleRateInHz, channelConfig);
+        Thread t_td_fd = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
+                t_ret = AudioFeature.timedomain(param);
+                Debug.stopMethodTracing();
+                f_ret = AudioFeature.freqdomain(param);
+                Debug.stopMethodTracing();
+            }
+        });
+        Thread t_mfcc = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
+                mfcc_ret_batch = AudioFeature.mfccFeature(rawDatalist, sampleRateInHz, channelConfig);
+            }
+        });
+        t_td_fd.start();
+        t_mfcc.start();
+        try {
+            t_td_fd.join();
+            t_mfcc.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         try {
             writer = new FileWriter(Constant.FILE_PATH, true);
             for (double aT_ret : t_ret) {
