@@ -47,11 +47,12 @@ public class AudioFeature {
         double q1 = rank.evaluate(rawdata, 25);
         double q3 = rank.evaluate(rawdata, 75);
         double iqr = q3 - q1;
-        Kurtosis mykur = new Kurtosis();
-        double kur = mykur.evaluate(rawdata);
+//        Kurtosis mykur = new Kurtosis();
+//        double kur = mykur.evaluate(rawdata);
+//        double kur = 0;
         Skewness myske = new Skewness();
         double ske = myske.evaluate(rawdata);
-        return new double[]{max, min, mean, std, med, q1, q3, iqr, kur, ske};
+        return new double[]{max, min, mean, std, med, q1, q3, iqr, ske};
     }
 
 
@@ -112,13 +113,14 @@ public class AudioFeature {
         double fmed = rank.evaluate(freqrawdata, 50);
         double fiqr = rank.evaluate(freqrawdata, 75) - rank.evaluate(freqrawdata, 25);
 
-        Kurtosis mykur = new Kurtosis();
-        double fkur = mykur.evaluate(freqrawdata);
+//        Kurtosis mykur = new Kurtosis();
+//        double fkur = mykur.evaluate(freqrawdata);
+//        double fkur = 0;
 
         Skewness myske = new Skewness();
         double fske = myske.evaluate(freqrawdata);
 
-        return new double[]{fmean1, fmean2, fmean3, fmean4, fmean5, fmean6, fmean7, fstd, fmed, fkur, fske, fiqr};
+        return new double[]{fmean1, fmean2, fmean3, fmean4, fmean5, fmean6, fmean7, fstd, fmed, fske, fiqr};
     }
 
     public static List<float[]> mfccFeature(List<Byte> datalist, int sampleRateInHz, int channelConfig) {
