@@ -44,12 +44,20 @@ import weka.MakeArffFile;
  */
 
 public class CollectionActivity extends AppCompatActivity implements View.OnClickListener {
-
+    // 录音线程;
+    RecordThread recordThread;
+    // 当前按下的button
+    PositionButtonWrapper currentButtonWrapper;
     // UI配置
     // 所有的位置button信息的map
+    int[] buttonIDs = {
+            R.id.button1, R.id.button2, R.id.button3, R.id.button4,
+            R.id.button5, R.id.button6, R.id.button7, R.id.button8,
+            R.id.button9, R.id.button10, R.id.button11, R.id.button12,
+            R.id.button13, R.id.button14, R.id.button15, R.id.button16,
+            R.id.button17, R.id.button18
+    };
     private HashMap<Integer, PositionButtonWrapper> positionClassButtonMap = new HashMap<>();
-    private Button button_test;
-    private MenuItem item1, item2, item3, item4;
     private SeekBar sbAdjWindowSize, sbAdjOverlapPercentage;
     private EditText txtAdjNoiseRecordTime;
     private TextView txtWindowLength, txtCurOverlapPercentage;
@@ -104,6 +112,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         initialize();
 
         new AndroidFFMPEGLocator(this);
+
+        isRecording = false;
     }
 
     /*
@@ -111,13 +121,6 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
      * 初始化视图绑定
      * */
     private void initialize() {
-        int[] buttonIDs = {
-                R.id.button1, R.id.button2, R.id.button3, R.id.button4,
-                R.id.button5, R.id.button6, R.id.button7, R.id.button8,
-                R.id.button9, R.id.button10, R.id.button11, R.id.button12,
-                R.id.button13, R.id.button14, R.id.button15, R.id.button16,
-                R.id.button17, R.id.button18
-        };
 //         注册口腔位置的一系列button 并用map存储
         for (int buttonID : buttonIDs) {
             // 将button通过wrapper放入map中
@@ -223,32 +226,57 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     @Override
     public void onClick(View v) {
 
-//        if (v.getId() == R.id.button_test) {
-//            if (recordFlag == 0) {
-//                Intent intent = new Intent(CollectionActivity.this, DisplayActivity.class);
-//                startActivity(intent);
-//            }
-//        } else {
         // 获取当前点击的button信息
         PositionButtonWrapper positionButtonWrapper = positionClassButtonMap.get(v.getId());
         Button currentButton = positionButtonWrapper.getButton();
+        // 初始化控制按钮(即1号按钮)
+        PositionButtonWrapper initButtonWrapper = positionClassButtonMap.get(buttonIDs[0]);
         // 如果未开始录制 则开始采集对应类别的信息 否则停止
-        if (recordFlag == 0) {
-            startRecording(positionButtonWrapper);
-        } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
-            currentButton.setText("处理中");
-            currentButton.setBackgroundColor(getResources().getColor(R.color.blue));
-            stopRecording();
+        if (!isRecording) {
+            if (positionButtonWrapper.getButtonLogicID() == 1) {
+                currentButton.setText("停止");
+                currentButton.setBackgroundColor(getResources().getColor(R.color.light_green));
+                recordFlag = 1;
+                currentButtonWrapper = positionButtonWrapper;
+                startRecording();
+            }
+        } else {
+            // 仅当逻辑id为第一个的时候才停止录制
+            if (positionButtonWrapper.getButtonLogicID() == 1 && positionButtonWrapper.getButtonLogicID() == recordFlag) {
+                stopRecording();
+                currentButton.setText(positionButtonWrapper.getLabel());
+                currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
+                recordFlag = 0;
+                currentButtonWrapper = positionButtonWrapper;
+            } else {
+                if (recordFlag == 1) {
+                    // 如果开始录制 并且是噪声(没有其他按键被按下) 则切换种类
+                    currentButton.setText("停止");
+                    currentButton.setBackgroundColor(getResources().getColor(R.color.light_green));
+                    recordFlag = positionButtonWrapper.getButtonLogicID();
+                    currentButtonWrapper = positionButtonWrapper;
+                    System.out.println("当前: " + recordFlag);
+                } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
+                    // 如果开始录制 且不是噪声 是特定种类 且按的是该种类的按键 则切换回噪声录制
+                    currentButton.setText(positionButtonWrapper.getLabel());
+                    currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
+                    recordFlag = 1;
+                    currentButtonWrapper = initButtonWrapper;
+                    System.out.println("当前: " + recordFlag);
+                }
+            }
+//            currentButton.setText("处理中");
+//            currentButton.setBackgroundColor(getResources().getColor(R.color.blue));
         }
-//        }
     }
 
-    public void startRecording(PositionButtonWrapper currentButton) {
+    public void startRecording() {
         isRecording = true;
         Log.i(TAG, "startRecording");
         // 开始录音,计算并写入
-        Thread recordThread = new Thread(new RecordThread(currentButton));
-        recordThread.start();
+        recordThread = new RecordThread();
+        Thread recordThreadExecutor = new Thread(recordThread);
+        recordThreadExecutor.start();
     }
 
     public void stopRecording() {
@@ -257,15 +285,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     }
 
     class RecordThread implements Runnable {
-        PositionButtonWrapper currentButton;
-
-        public RecordThread(PositionButtonWrapper currentButton) {
-            this.currentButton = currentButton;
-        }
-
         @Override
         public void run() {
-            recordFlag = currentButton.getButtonLogicID();
             // 设置UI
             runOnUiThread(new Runnable() {
                 @Override
@@ -273,15 +294,13 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     sbAdjWindowSize.setEnabled(false);
                     sbAdjOverlapPercentage.setEnabled(false);
                     txtAdjNoiseRecordTime.setEnabled(false);
-                    currentButton.getButton().setText("停止");
-                    currentButton.getButton().setBackgroundColor(getResources().getColor(R.color.light_green));
                 }
             });
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
             // 录制并计算噪声特征
 //            recordAndCalcNoiseFeat();
             // 录制正常声信号
-            recordAndProcessData(currentButton);
+            recordAndProcessData();
             // recordFlag要在录音结束后置0
             System.out.println("Data Written.");
             // 设置UI
@@ -291,8 +310,6 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     sbAdjWindowSize.setEnabled(true);
                     sbAdjOverlapPercentage.setEnabled(true);
                     txtAdjNoiseRecordTime.setEnabled(true);
-                    currentButton.getButton().setText(currentButton.getLabel());
-                    currentButton.getButton().setBackgroundColor(getResources().getColor(R.color.gray));
                 }
             });
             recordFlag = 0;
@@ -366,7 +383,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
      * 如果需要播放就必须加入一些格式或者编码的头信息。但是这样的好处就是你可以对音频的 裸数据进行处理，比如你要做一个爱说话的TOM
      * 猫在这里就进行音频的处理，然后重新封装 所以说这样得到的音频比较容易做一些音频的处理。
      */
-    private void recordAndProcessData(PositionButtonWrapper currentButtonWrapper) {
+    private void recordAndProcessData() {
         final Button currentButton = currentButtonWrapper.getButton();
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
         final byte[] inputSignal = new byte[bufferSizeInBytes];
@@ -421,6 +438,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                                 + " | Proccessed:" + windowStart
                                 + " | Total:" + signalBuffer.size()
                 );
+                System.out.println(currentButtonWrapper.getButtonLogicID());
 //                final double remainPercentage = (double) (signalBuffer.size() - windowStart) / signalBuffer.size() * 100;
 //                if (remainPercentage - (int) remainPercentage < 0.5) {
 //                    runOnUiThread(new Runnable() {
