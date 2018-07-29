@@ -279,7 +279,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             });
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
             // 录制并计算噪声特征
-            recordAndCalcNoiseFeat();
+//            recordAndCalcNoiseFeat();
             // 录制正常声信号
             recordAndProcessData(currentButton);
             // recordFlag要在录音结束后置0
@@ -386,21 +386,51 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 ignoreFrameCounter--;
                 continue;
             }
-//            for (byte anInputSignal : inputSignal) {
+            for (byte anInputSignal : inputSignal) {
 //                totalSignal.add(anInputSignal);
-////                signalBuffer.add(anInputSignal);
-//            }
-            // 清除噪声
-            List<Short> inputSignal_16bit = new ArrayList<>();
-            // 计算真实数值
-            for (int i = 0; i < inputSignal.length; i += 2) {
-                inputSignal_16bit.add((short) rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+                signalBuffer.add(anInputSignal);
             }
-            spectralSubstraction.setSignal(inputSignal_16bit);
-            // 对inputSignal进行降噪
-            short[] inputSignal_16bit_denoise = spectralSubstraction.noiseSubtraction();
-            for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
-                signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
+//            // 清除噪声
+//            List<Short> inputSignal_16bit = new ArrayList<>();
+//            // 计算真实数值
+//            for (int i = 0; i < inputSignal.length; i += 2) {
+//                inputSignal_16bit.add((short) rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+//            }
+//            assert spectralSubstraction != null;
+//            spectralSubstraction.setSignal(inputSignal_16bit);
+//            // 对inputSignal进行降噪
+//            short[] inputSignal_16bit_denoise = spectralSubstraction.noiseSubtraction();
+//            for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
+//                signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
+//            }
+            while (windowStart + windowLength < signalBuffer.size()) {
+                List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
+                // 存储数值型数据
+                double[] numericalDatalist = new double[rawDatalist.size() - 1];
+//             将原始数据转换成double型数值数据 为了防止rawdata长度是奇数 需要判断时i+1
+                for (int i = 0; i + 1 < rawDatalist.size(); i += 2) {
+                    int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
+//                numericalDatalist.add(sig);
+                    numericalDatalist[i / 2] = (double) sig;
+                }
+                MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
+//             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
+                windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
+                System.out.println(
+                        "Remain:" + (signalBuffer.size() - windowStart)
+                                + " | Proccessed:" + windowStart
+                                + " | Total:" + signalBuffer.size()
+                );
+//                final double remainPercentage = (double) (signalBuffer.size() - windowStart) / signalBuffer.size() * 100;
+//                if (remainPercentage - (int) remainPercentage < 0.5) {
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            currentButton.setText(String.format("%.1f%%", remainPercentage));
+//                        }
+//                    });
+//
+//                }
             }
 //            // 对采集进来的整体音频信号进行处理 消费若干个窗口
 //            while (windowStart + windowLength < signalBuffer.size()) {
@@ -434,29 +464,31 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 //        }
         System.out.println("计算信号特征");
 //        // 对采集进来的整体音频信号进行处理 消费若干个窗口
-        while (windowStart + windowLength < signalBuffer.size()) {
-            List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
-            List<Integer> numericalDatalist = new ArrayList<>();
-//             将原始数据转换成数值数据
-            for (int i = 0; i + 2 < rawDatalist.size(); i += 2) {
-                int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
-                numericalDatalist.add(sig);
-            }
-            MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
-//             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-            windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
-            System.out.println("Remain:" + (signalBuffer.size() - windowStart));
-            final double remainPercentage = (double) (signalBuffer.size() - windowStart) / signalBuffer.size() * 100;
-            if (remainPercentage - (int) remainPercentage < 0.5) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        currentButton.setText(String.format("%.1f%%", remainPercentage));
-                    }
-                });
-
-            }
-        }
+//        while (windowStart + windowLength < signalBuffer.size()) {
+//            List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
+//            // 存储数值型数据
+//            double[] numericalDatalist = new double[rawDatalist.size() - 1];
+////             将原始数据转换成double型数值数据 为了防止rawdata长度是奇数 需要判断时i+1
+//            for (int i = 0; i + 1 < rawDatalist.size(); i += 2) {
+//                int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
+////                numericalDatalist.add(sig);
+//                numericalDatalist[i / 2] = (double) sig;
+//            }
+//            MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
+////             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
+//            windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
+//            System.out.println("Remain:" + (signalBuffer.size() - windowStart));
+//            final double remainPercentage = (double) (signalBuffer.size() - windowStart) / signalBuffer.size() * 100;
+//            if (remainPercentage - (int) remainPercentage < 0.5) {
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        currentButton.setText(String.format("%.1f%%", remainPercentage));
+//                    }
+//                });
+//
+//            }
+//        }
         // 停止并释放录音实例
         mRecorder.stop();
         mRecorder.release();
