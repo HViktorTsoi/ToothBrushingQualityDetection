@@ -428,8 +428,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 //            for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
 //                signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
 //            }
-            while (windowStart + windowLength < signalBuffer.size()) {
-                List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
+            while (windowLength < signalBuffer.size()) {
+                List<Byte> rawDatalist = signalBuffer.subList(0, windowLength);
                 // 存储数值型数据
                 double[] numericalDatalist = new double[rawDatalist.size() - 1];
 //             将原始数据转换成double型数值数据 为了防止rawdata长度是奇数 需要判断时i+1
@@ -440,18 +440,26 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
 //             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-                windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
+//                windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
 //                System.out.println(
 //                        "Remain:" + (signalBuffer.size() - windowStart)
 //                                + " | Proccessed:" + windowStart
 //                                + " | Total:" + signalBuffer.size()
 //                );
 //                System.out.println(currentButtonWrapper.getButtonLogicID());
+//             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
+//                System.out.println("处理前signalbuffer：" + signalBuffer.size());
+                ArrayList<Byte> newSignalBuffer = new ArrayList<>();
+                windowStart = (int) ((double) windowLength * (1 - (double) overlapPercentage / 100));
+                for (int i = windowStart; i < signalBuffer.size(); ++i) {
+                    newSignalBuffer.add(signalBuffer.get(i));
+                }
+                signalBuffer = newSignalBuffer;
+//                System.out.println("目前signalbuffer：" + signalBuffer.size());
                 // 计算已经录音的时间
                 final double recordingTime = 0.001 * (System.currentTimeMillis() - currentButtonWrapper.getRecordingTime());
                 if (((int) (recordingTime * 10) % 5 == 0)) {
                     if (currentButtonWrapper.getButtonLogicID() != 1) {
-                        System.out.println(recordingTime);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
