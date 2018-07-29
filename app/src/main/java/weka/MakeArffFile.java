@@ -32,25 +32,25 @@ public class MakeArffFile {
         try {
             File file = new File(Constant.FILE_PATH);
             boolean flag = true;
-            if (file.exists()) {
-                file.delete();
+            if (!file.exists()) {
+//                file.delete();
+                FileOutputStream fos = new FileOutputStream(Constant.FILE_PATH, true);
+                flag = false;
             }
-            FileOutputStream fos = new FileOutputStream(Constant.FILE_PATH, true);
-            flag = false;
-            writer = new FileWriter(Constant.FILE_PATH, true);
             if (!flag) {
+                writer = new FileWriter(Constant.FILE_PATH, true);
                 writer.write("@relation mfcc_td_fd\n");
                 writer.write("\n");
-                writer.write("@attribute Max numeric\n");
-                writer.write("@attribute Min numeric\n");
-                writer.write("@attribute Mean numeric\n");
-                writer.write("@attribute STD numeric\n");
-                writer.write("@attribute Med numeric\n");
-                writer.write("@attribute Kur numeric\n");
-                writer.write("@attribute Ske numeric\n");
-                writer.write("@attribute Q1 numeric\n");
-                writer.write("@attribute Q3 numeric\n");
-                writer.write("@attribute IQR numeric\n");
+                writer.write("@attribute TMax numeric\n");
+                writer.write("@attribute TMin numeric\n");
+                writer.write("@attribute TMean numeric\n");
+                writer.write("@attribute TSTD numeric\n");
+                writer.write("@attribute TMed numeric\n");
+//                writer.write("@attribute Kur numeric\n");
+                writer.write("@attribute TSke numeric\n");
+                writer.write("@attribute TQ1 numeric\n");
+                writer.write("@attribute TQ3 numeric\n");
+                writer.write("@attribute TIQR numeric\n");
                 writer.write("@attribute FMean1 numeric\n");
                 writer.write("@attribute FMean2 numeric\n");
                 writer.write("@attribute FMean3 numeric\n");
@@ -60,21 +60,21 @@ public class MakeArffFile {
                 writer.write("@attribute FMean7 numeric\n");
                 writer.write("@attribute FSD numeric\n");
                 writer.write("@attribute FMed numeric\n");
-                writer.write("@attribute FKur numeric\n");
+//                writer.write("@attribute FKur numeric\n");
                 writer.write("@attribute FSke numeric\n");
                 writer.write("@attribute FIqr numeric\n");
-                writer.write("@attribute MFCC1 numeric\n");
-                writer.write("@attribute MFCC2 numeric\n");
-                writer.write("@attribute MFCC3 numeric\n");
-                writer.write("@attribute MFCC4 numeric\n");
-                writer.write("@attribute MFCC5 numeric\n");
-                writer.write("@attribute MFCC6 numeric\n");
-                writer.write("@attribute MFCC7 numeric\n");
-                writer.write("@attribute MFCC8 numeric\n");
-                writer.write("@attribute MFCC9 numeric\n");
-                writer.write("@attribute MFCC10 numeric\n");
-                writer.write("@attribute MFCC11 numeric\n");
-                writer.write("@attribute MFCC12 numeric\n");
+//                writer.write("@attribute MFCC1 numeric\n");
+//                writer.write("@attribute MFCC2 numeric\n");
+//                writer.write("@attribute MFCC3 numeric\n");
+//                writer.write("@attribute MFCC4 numeric\n");
+//                writer.write("@attribute MFCC5 numeric\n");
+//                writer.write("@attribute MFCC6 numeric\n");
+//                writer.write("@attribute MFCC7 numeric\n");
+//                writer.write("@attribute MFCC8 numeric\n");
+//                writer.write("@attribute MFCC9 numeric\n");
+//                writer.write("@attribute MFCC10 numeric\n");
+//                writer.write("@attribute MFCC11 numeric\n");
+//                writer.write("@attribute MFCC12 numeric\n");
                 // 分类目标
                 writer.write("@attribute class {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18}\n");
                 writer.write("\n");
@@ -86,35 +86,37 @@ public class MakeArffFile {
         }
     }
 
-    public static void calculate(List<Integer> numericalDatalist, final List<Byte> rawDatalist, String type, final int sampleRateInHz, final int channelConfig) {
-        final double[] param = new double[numericalDatalist.size()];
-        for (int i = 0; i < numericalDatalist.size(); i++)
-            param[i] = Double.valueOf(numericalDatalist.get(i));
-        Thread t_td_fd = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-                t_ret = AudioFeature.timedomain(param);
-                Debug.stopMethodTracing();
-                f_ret = AudioFeature.freqdomain(param);
-                Debug.stopMethodTracing();
-            }
-        });
-        Thread t_mfcc = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-                mfcc_ret_batch = AudioFeature.mfccFeature(rawDatalist, sampleRateInHz, channelConfig);
-            }
-        });
-        t_td_fd.start();
-        t_mfcc.start();
-        try {
-            t_td_fd.join();
-            t_mfcc.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public static void calculate(double[] numericalDatalist, final List<Byte> rawDatalist, String type, final int sampleRateInHz, final int channelConfig) {
+        final double[] param = numericalDatalist;
+//        final double[] param = new double[numericalDatalist.size()];
+//        for (int i = 0; i < numericalDatalist.size(); i++)
+//            param[i] = Double.valueOf(numericalDatalist.get(i));
+//        Thread t_td_fd = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+////                Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
+//                t_ret = AudioFeature.timedomain(param);
+//                f_ret = AudioFeature.freqdomain(param);
+//            }
+//        });
+//        Thread t_mfcc = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+////                Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
+//                mfcc_ret_batch = AudioFeature.mfccFeature(rawDatalist, sampleRateInHz, channelConfig);
+//            }
+//        });
+//        t_td_fd.start();
+//        t_mfcc.start();
+//        try {
+//            t_td_fd.join();
+//            t_mfcc.join();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+        t_ret = AudioFeature.timedomain(param);
+        f_ret = AudioFeature.freqdomain(param);
+//        mfcc_ret_batch = AudioFeature.mfccFeature(rawDatalist, sampleRateInHz, channelConfig);
         try {
             writer = new FileWriter(Constant.FILE_PATH, true);
             for (double aT_ret : t_ret) {
@@ -124,13 +126,13 @@ public class MakeArffFile {
                 writer.write(String.valueOf(aF_ret) + ",");
             }
             // 如果有mfcc属性 则写入
-            if (mfcc_ret_batch != null && mfcc_ret_batch.size() > 0) {
-                // 由于窗口是自己实现好的 所以只需要写入mfccList的第一维 即当前窗口的mfcc
-                float[] mfcc_ret = mfcc_ret_batch.get(0);
-                for (float aMfcc_ret : mfcc_ret) {
-                    writer.write(String.valueOf(aMfcc_ret) + ",");
-                }
-            }
+//            if (mfcc_ret_batch != null && mfcc_ret_batch.size() > 0) {
+//                // 由于窗口是自己实现好的 所以只需要写入mfccList的第一维 即当前窗口的mfcc
+//                float[] mfcc_ret = mfcc_ret_batch.get(0);
+//                for (float aMfcc_ret : mfcc_ret) {
+//                    writer.write(String.valueOf(aMfcc_ret) + ",");
+//                }
+//            }
             writer.write(type);
             writer.write("\n");
             writer.close();
