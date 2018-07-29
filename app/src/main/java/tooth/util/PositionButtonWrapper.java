@@ -1,6 +1,7 @@
 package tooth.util;
 
 import android.widget.Button;
+
 /*
     存储button信息
     Created by Cui Jiahe 2018/07/16
@@ -18,10 +19,21 @@ public class PositionButtonWrapper {
     };
     private Button button;
     private Integer buttonLogicID;
+    private double recordingTime;
 
-    public PositionButtonWrapper(Button button, Integer buttonLogicID) {
+    public double getRecordingTime() {
+        return recordingTime;
+    }
+
+    public void setRecordingTime(double recordingTime) {
+        this.recordingTime = recordingTime;
+    }
+
+
+    public PositionButtonWrapper(Button button, Integer buttonLogicID, double recordingTime) {
         this.button = button;
         this.buttonLogicID = buttonLogicID;
+        this.recordingTime = recordingTime;
     }
 
     public Button getButton() {
