@@ -10,7 +10,7 @@ public class PositionButtonWrapper {
 
     final static private String[] labelList = {
             "",
-            "无", "漱口", "上左后外",
+            "噪声", "漱口", "上左后外",
             "上前外", "上右后外", "上左后中",
             "上右后中", "上左后内", "上前内",
             "上右后内", "下左后外", "下前外",
