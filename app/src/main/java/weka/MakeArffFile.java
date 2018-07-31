@@ -139,10 +139,10 @@ public class MakeArffFile {
         try {
             writer = new FileWriter(dataSetPath, true);
             for (double aT_ret : t_ret) {
-                writer.write(String.valueOf(aT_ret) + ",");
+                writer.write(String.format("%.5f,", aT_ret));
             }
             for (double aF_ret : f_ret) {
-                writer.write(String.valueOf(aF_ret) + ",");
+                writer.write(String.format("%.5f,", aF_ret));
             }
             // 如果有mfcc属性 则写入
 //            if (mfcc_ret_batch != null && mfcc_ret_batch.size() > 0) {
