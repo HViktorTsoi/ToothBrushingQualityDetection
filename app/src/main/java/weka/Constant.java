@@ -5,7 +5,7 @@ package weka;
  */
 
 public class Constant {
-    public static final String FILE_PATH = "/sdcard/brushingrecord/data/data.arff";
+    public static final String FILE_PATH = "/sdcard/brushingrecord/data/";
     public static final String MODEL_PATH = "/sdcard/brushingrecord/model/tree.model";
     public static final String MFCC_TMP_PATH = "/sdcard/brushingrecord/mfcc_temp.wav";
 

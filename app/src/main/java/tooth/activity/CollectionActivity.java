@@ -1,37 +1,28 @@
 package tooth.activity;
 
 import android.app.ProgressDialog;
-import android.content.Intent;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Process;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.NumberPicker;
 import android.widget.SeekBar;
 import android.widget.TextView;
-
-import org.json.JSONArray;
+import android.widget.Toast;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import be.tarsos.dsp.io.android.AndroidFFMPEGLocator;
 import cjh.recorder.R;
@@ -48,9 +39,13 @@ import weka.MakeArffFile;
 public class CollectionActivity extends AppCompatActivity implements View.OnClickListener {
     // 录音线程;
     RecordThread recordThread;
+    Thread recordThreadExecutor;
     // 当前按下的button
     PositionButtonWrapper currentButtonWrapper;
     PositionButtonWrapper initButtonWrapper;
+    // 当前数据集的名称
+    String currentDataSetName = "";
+
     // UI配置
     // 所有的位置button信息的map
     int[] buttonIDs = {
@@ -100,23 +95,36 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
          ** By Y4
          *  初始化文件存储路径
          */
-        File file = new File(Constant.FILE_PATH);
-        File fileParent = file.getParentFile();
-        if (!fileParent.exists()) {
-            fileParent.mkdirs();
-        }
-        file = new File(Constant.MODEL_PATH);
-        fileParent = file.getParentFile();
-        if (!fileParent.exists()) {
-            fileParent.mkdirs();
-        }
-        MakeArffFile.initArffFile();
+//        File file = new File(Constant.FILE_PATH);
+//        File fileParent = file.getParentFile();
+//        if (!fileParent.exists()) {
+//            fileParent.mkdirs();
+//        }
+//        file = new File(Constant.MODEL_PATH);
+//        fileParent = file.getParentFile();
+//        if (!fileParent.exists()) {
+//            fileParent.mkdirs();
+//        }
+//        MakeArffFile.initArffFile();
 
         initialize();
 
         new AndroidFFMPEGLocator(this);
 
         isRecording = false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Toast.makeText(this, "正在处理未停止的录音进程", Toast.LENGTH_SHORT).show();
+        System.out.println("停止录音");
+        this.isRecording = false;
+        try {
+            this.recordThreadExecutor.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /*
@@ -250,7 +258,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 stopRecording();
                 currentButton.setText(positionButtonWrapper.getLabel());
                 currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
-                recordFlag = 0;
+//                recordFlag = 0; // 为了防止停下来之后写入带有0的数据
                 switchCurrentButton(positionButtonWrapper);
 //                currentButtonWrapper = positionButtonWrapper;
             } else {
@@ -279,11 +287,14 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     }
 
     public void startRecording() {
+        currentDataSetName = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(new Date().getTime());
+        currentDataSetName += ".arff";
+        System.out.println(currentDataSetName);
         isRecording = true;
         Log.i(TAG, "startRecording");
         // 开始录音,计算并写入
         recordThread = new RecordThread();
-        Thread recordThreadExecutor = new Thread(recordThread);
+        recordThreadExecutor = new Thread(recordThread);
         recordThreadExecutor.start();
     }
 
@@ -438,7 +449,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 //                numericalDatalist.add(sig);
                     numericalDatalist[i / 2] = (double) sig;
                 }
-                MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
+                MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), currentDataSetName, sampleRateInHz, channelConfig, windowLength, overlapPercentage);
 //             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
 //                windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
 //                System.out.println(

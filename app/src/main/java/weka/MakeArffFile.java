@@ -28,18 +28,25 @@ public class MakeArffFile {
     private static double[] t_ret;
     private static double[] f_ret;
 
-    public static void initArffFile() {
+    public static void initArffFile(String filePath, double windowLength, int overlapPercentage) {
         try {
-            File file = new File(Constant.FILE_PATH);
+            File file = new File(filePath);
             boolean flag = true;
-            if (!file.exists()) {
-//                file.delete();
-                FileOutputStream fos = new FileOutputStream(Constant.FILE_PATH, true);
-                flag = false;
+            File fileParent = file.getParentFile();
+            if (!fileParent.exists()) {
+                fileParent.mkdirs();
+                System.out.println("创建了父文件夹");
             }
-            if (!flag) {
-                writer = new FileWriter(Constant.FILE_PATH, true);
-                writer.write("@relation mfcc_td_fd\n");
+//            if (!file.exists()) {
+////                file.delete();
+//                FileOutputStream fos = new FileOutputStream(filePath, true);
+//                flag = false;
+//            }
+            if (!file.exists()) {
+                System.out.println("创建文件头");
+                String relationName = String.format("%.1f_%d%%", windowLength, overlapPercentage);
+                writer = new FileWriter(filePath, true);
+                writer.write("@relation " + relationName + "\n");
                 writer.write("\n");
                 writer.write("@attribute TMax numeric\n");
                 writer.write("@attribute TMin numeric\n");
@@ -86,7 +93,19 @@ public class MakeArffFile {
         }
     }
 
-    public static void calculate(double[] numericalDatalist, final List<Byte> rawDatalist, String type, final int sampleRateInHz, final int channelConfig) {
+    public static void calculate(
+            double[] numericalDatalist,
+            final List<Byte> rawDatalist,
+            String type,
+            String dataSetName,
+            final int sampleRateInHz,
+            final int channelConfig,
+            double windowLength,
+            int overlapPercentage
+    ) {
+        // 初始化文件
+        String dataSetPath = Constant.FILE_PATH + dataSetName;
+        initArffFile(dataSetPath, windowLength / sampleRateInHz, overlapPercentage);
         final double[] param = numericalDatalist;
 //        final double[] param = new double[numericalDatalist.size()];
 //        for (int i = 0; i < numericalDatalist.size(); i++)
@@ -118,7 +137,7 @@ public class MakeArffFile {
         f_ret = AudioFeature.freqdomain(param);
 //        mfcc_ret_batch = AudioFeature.mfccFeature(rawDatalist, sampleRateInHz, channelConfig);
         try {
-            writer = new FileWriter(Constant.FILE_PATH, true);
+            writer = new FileWriter(dataSetPath, true);
             for (double aT_ret : t_ret) {
                 writer.write(String.valueOf(aT_ret) + ",");
             }
