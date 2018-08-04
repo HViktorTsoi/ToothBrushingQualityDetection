@@ -112,7 +112,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 
         initialize();
 
-        new AndroidFFMPEGLocator(this);
+//        new AndroidFFMPEGLocator(this);
 
         isRecording = false;
         isRecordStarted = false;
@@ -146,7 +146,9 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     new PositionButtonWrapper((Button) findViewById(buttonID), positionClassButtonMap.size() + 1, 0));
             positionClassButtonMap.get(buttonID).getButton().setOnClickListener(this);
             // 初始化牙面button不可用
-            Objects.requireNonNull(findViewById(buttonID)).setEnabled(false);
+            positionClassButtonMap.get(buttonID).getButton().setEnabled(false);
+            positionClassButtonMap.get(buttonID).getButton().setBackgroundColor(getResources().getColor(R.color.gray));
+            positionClassButtonMap.get(buttonID).getButton().setTextColor(getResources().getColor(R.color.dark_gray));
         }
         buttonControl = (Button) findViewById(R.id.button_ctrl);
         Objects.requireNonNull(buttonControl).setOnClickListener(this);
@@ -193,6 +195,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
                 overlapPercentage = discretization(progress, 10);
+                overlapPercentage = overlapPercentage > 90 ? 90 : overlapPercentage;
                 txtCurOverlapPercentage.setText(String.format("%d%%", overlapPercentage));
                 System.out.println(overlapPercentage);
             }
@@ -255,20 +258,29 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     isRecordStarted = true;
                     for (PositionButtonWrapper button : positionClassButtonMap.values()) {
                         button.getButton().setEnabled(true);
+                        button.getButton().setTextColor(getResources().getColor(R.color.black));
                     }
                     currentDataSetName = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(new Date().getTime());
                     currentDataSetName += "_" + UUID.randomUUID();
                     currentDataSetName += ".arff";
                     buttonControl.setText("停止");
                     buttonControl.setBackgroundColor(getResources().getColor(R.color.light_green));
+                    sbAdjWindowSize.setEnabled(false);
+                    sbAdjOverlapPercentage.setEnabled(false);
+                    txtAdjNoiseRecordTime.setEnabled(false);
                 } else {
                     // 设置停止记录
                     isRecordStarted = false;
                     for (PositionButtonWrapper button : positionClassButtonMap.values()) {
                         button.getButton().setEnabled(false);
+                        button.getButton().setBackgroundColor(getResources().getColor(R.color.gray));
+                        button.getButton().setTextColor(getResources().getColor(R.color.dark_gray));
                     }
                     buttonControl.setText("开始");
                     buttonControl.setBackgroundColor(getResources().getColor(R.color.gray));
+                    sbAdjWindowSize.setEnabled(true);
+                    sbAdjOverlapPercentage.setEnabled(true);
+                    txtAdjNoiseRecordTime.setEnabled(true);
                 }
             }
         } else {
@@ -278,15 +290,18 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             if (!isRecording) {
                 currentButton.setText("停止");
                 currentButton.setBackgroundColor(getResources().getColor(R.color.blue));
+                currentButton.setTextColor(getResources().getColor(R.color.white));
                 recordFlag = positionButtonWrapper.getButtonLogicID();
                 switchCurrentButton(positionButtonWrapper);
                 currentButtonWrapper.setRecordingTime(System.currentTimeMillis()); //设置录音起始时间
                 System.out.println("当前: " + recordFlag);
                 startRecording();
             } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
+                // 停止录制
                 stopRecording();
                 currentButton.setText(positionButtonWrapper.getLabel());
-                currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
+                currentButton.setBackgroundColor(getResources().getColor(R.color.white));
+                currentButton.setTextColor(getResources().getColor(R.color.black));
             }
         }
 
@@ -360,14 +375,14 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         @Override
         public void run() {
             // 设置UI
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    sbAdjWindowSize.setEnabled(false);
-                    sbAdjOverlapPercentage.setEnabled(false);
-                    txtAdjNoiseRecordTime.setEnabled(false);
-                }
-            });
+//            runOnUiThread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    sbAdjWindowSize.setEnabled(false);
+//                    sbAdjOverlapPercentage.setEnabled(false);
+//                    txtAdjNoiseRecordTime.setEnabled(false);
+//                }
+//            });
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
             // 录制并计算噪声特征
 //            recordAndCalcNoiseFeat();
@@ -376,15 +391,14 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             // recordFlag要在录音结束后置0
             System.out.println("Data Written.");
             // 设置UI
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    sbAdjWindowSize.setEnabled(true);
-                    sbAdjOverlapPercentage.setEnabled(true);
-                    txtAdjNoiseRecordTime.setEnabled(true);
-                }
-            });
-            recordFlag = 0;
+//            runOnUiThread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    sbAdjWindowSize.setEnabled(true);
+//                    sbAdjOverlapPercentage.setEnabled(true);
+//                    txtAdjNoiseRecordTime.setEnabled(true);
+//                }
+//            });
         }
     }
 

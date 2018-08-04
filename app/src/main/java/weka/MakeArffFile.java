@@ -32,56 +32,21 @@ public class MakeArffFile {
         try {
             File file = new File(filePath);
             boolean flag = true;
+            // 检测并创建父文件夹
             File fileParent = file.getParentFile();
             if (!fileParent.exists()) {
                 fileParent.mkdirs();
                 System.out.println("创建了父文件夹");
             }
-//            if (!file.exists()) {
-////                file.delete();
-//                FileOutputStream fos = new FileOutputStream(filePath, true);
-//                flag = false;
-//            }
             if (!file.exists()) {
                 System.out.println("创建文件头");
                 String relationName = String.format("%.1f_%d%%", windowLength, overlapPercentage);
                 writer = new FileWriter(filePath, true);
                 writer.write("@relation " + relationName + "\n");
                 writer.write("\n");
-                writer.write("@attribute TMax numeric\n");
-                writer.write("@attribute TMin numeric\n");
-                writer.write("@attribute TMean numeric\n");
-                writer.write("@attribute TSTD numeric\n");
-                writer.write("@attribute TMed numeric\n");
-//                writer.write("@attribute Kur numeric\n");
-                writer.write("@attribute TSke numeric\n");
-                writer.write("@attribute TQ1 numeric\n");
-                writer.write("@attribute TQ3 numeric\n");
-                writer.write("@attribute TIQR numeric\n");
-                writer.write("@attribute FMean1 numeric\n");
-                writer.write("@attribute FMean2 numeric\n");
-                writer.write("@attribute FMean3 numeric\n");
-                writer.write("@attribute FMean4 numeric\n");
-                writer.write("@attribute FMean5 numeric\n");
-                writer.write("@attribute FMean6 numeric\n");
-                writer.write("@attribute FMean7 numeric\n");
-                writer.write("@attribute FSD numeric\n");
-                writer.write("@attribute FMed numeric\n");
-//                writer.write("@attribute FKur numeric\n");
-                writer.write("@attribute FSke numeric\n");
-                writer.write("@attribute FIqr numeric\n");
-//                writer.write("@attribute MFCC1 numeric\n");
-//                writer.write("@attribute MFCC2 numeric\n");
-//                writer.write("@attribute MFCC3 numeric\n");
-//                writer.write("@attribute MFCC4 numeric\n");
-//                writer.write("@attribute MFCC5 numeric\n");
-//                writer.write("@attribute MFCC6 numeric\n");
-//                writer.write("@attribute MFCC7 numeric\n");
-//                writer.write("@attribute MFCC8 numeric\n");
-//                writer.write("@attribute MFCC9 numeric\n");
-//                writer.write("@attribute MFCC10 numeric\n");
-//                writer.write("@attribute MFCC11 numeric\n");
-//                writer.write("@attribute MFCC12 numeric\n");
+                for (String attrName : Constant.WEKA_ATTS) {
+                    writer.write("@attribute " + attrName + " numeric\n");
+                }
                 // 分类目标
                 writer.write("@attribute class {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18}\n");
                 writer.write("\n");

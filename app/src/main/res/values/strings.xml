@@ -54,7 +54,7 @@
     <string name="brushresult_drbi">下右后内</string>
 
     <string name="window_size">窗口大小:</string>
-    <string name="overlap_percentage">步长:</string>
+    <string name="overlap_percentage">重叠率:</string>
     <string name="noise_record_time">噪声时长(s):</string>
 
     <string name="log_username">用户名</string>
