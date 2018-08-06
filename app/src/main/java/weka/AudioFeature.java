@@ -87,7 +87,9 @@ public class AudioFeature {
         System.arraycopy(rawdata, 0, newrawdata, 0, endindex);
 
         for (int i = 0; i < endindex; i++) {
-            freqrawdata[i] = freqdata[i].getReal();
+//            freqrawdata[i] = freqdata[i].abs();
+//            freqrawdata[i] = Math.pow(freqdata[i].abs(), 2) / newrawdata.length;
+            freqrawdata[i] = freqdata[i].abs() * 2 / newrawdata.length;
         }
 
         for (int i = 0; i < 7; i++) {
@@ -106,8 +108,7 @@ public class AudioFeature {
         double fmean7 = meancal.evaluate(sub[6]);
 
         Variance var = new Variance();
-        double fstd = var.evaluate(freqrawdata);
-        fstd = FastMath.sqrt(fstd);
+        double fsd = var.evaluate(freqrawdata);
 
         Median rank = new Median();
         double fmed = rank.evaluate(freqrawdata, 50);
@@ -120,7 +121,7 @@ public class AudioFeature {
         Skewness myske = new Skewness();
         double fske = myske.evaluate(freqrawdata);
 
-        return new double[]{fmean1, fmean2, fmean3, fmean4, fmean5, fmean6, fmean7, fstd, fmed, fske, fiqr};
+        return new double[]{fmean1, fmean2, fmean3, fmean4, fmean5, fmean6, fmean7, fsd, fmed, fske, fiqr};
     }
 
     public static List<float[]> mfccFeature(List<Byte> datalist, int sampleRateInHz, int channelConfig) {
