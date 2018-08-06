@@ -17,6 +17,13 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -29,6 +36,7 @@ import be.tarsos.dsp.io.android.AndroidFFMPEGLocator;
 import cjh.recorder.R;
 import tooth.util.PositionButtonWrapper;
 import tooth.util.noise.SpectralSubtraction;
+import weka.Constant;
 import weka.MakeArffFile;
 
 /**
@@ -82,7 +90,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     // 最大可调整窗口长度
     final static double maxWindowLengthInSecond = 0.5;
     //    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 2;//0.5/2s;
-    private int windowLength = 9040;//0.5/2s;
+    private int windowLength = (int) maxWindowLengthInSecond * sampleRateInHz;//0.5/2s;
     // 步长
     private int overlapPercentage = 50;
     // 噪声消除器
@@ -304,50 +312,6 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 currentButton.setTextColor(getResources().getColor(R.color.black));
             }
         }
-
-//
-//        // 如果未开始录制 则开始采集对应类别的信息 否则停止
-//        if (!isRecording) {
-//            if (positionButtonWrapper.getButtonLogicID() == 1) {
-//                currentButton.setText("停止");
-//                currentButton.setBackgroundColor(getResources().getColor(R.color.light_green));
-//                recordFlag = 1;
-//                switchCurrentButton(positionButtonWrapper);
-////                currentButtonWrapper = positionButtonWrapper;
-//                startRecording();
-//            }
-//        } else {
-//            // 仅当逻辑id为第一个的时候才停止录制
-//            if (positionButtonWrapper.getButtonLogicID() == 1 && positionButtonWrapper.getButtonLogicID() == recordFlag) {
-//                stopRecording();
-//                currentButton.setText(positionButtonWrapper.getLabel());
-//                currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
-////                recordFlag = 0; // 为了防止停下来之后写入带有0的数据
-//                switchCurrentButton(positionButtonWrapper);
-////                currentButtonWrapper = positionButtonWrapper;
-//            } else {
-//                if (recordFlag == 1) {
-//                    // 如果开始录制 并且是噪声(没有其他按键被按下) 则切换种类
-//                    currentButton.setText("停止");
-//                    currentButton.setBackgroundColor(getResources().getColor(R.color.blue));
-//                    recordFlag = positionButtonWrapper.getButtonLogicID();
-//                    switchCurrentButton(positionButtonWrapper);
-////                    currentButtonWrapper = positionButtonWrapper;
-//                    currentButtonWrapper.setRecordingTime(System.currentTimeMillis()); //设置录音起始时间
-//                    System.out.println("当前: " + recordFlag);
-//                } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
-//                    // 如果开始录制 且不是噪声 是特定种类 且按的是该种类的按键 则切换回噪声录制
-//                    currentButton.setText(positionButtonWrapper.getLabel());
-//                    currentButton.setBackgroundColor(getResources().getColor(R.color.gray));
-//                    recordFlag = 1;
-//                    switchCurrentButton(controlButtonWrapper);
-////                    currentButtonWrapper = controlButtonWrapper;
-//                    System.out.println("当前: " + recordFlag);
-//                }
-//            }
-////            currentButton.setText("处理中");
-////            currentButton.setBackgroundColor(getResources().getColor(R.color.blue));
-//        }
     }
 
     public void startRecording() {
@@ -374,31 +338,17 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     class RecordThread implements Runnable {
         @Override
         public void run() {
-            // 设置UI
-//            runOnUiThread(new Runnable() {
-//                @Override
-//                public void run() {
-//                    sbAdjWindowSize.setEnabled(false);
-//                    sbAdjOverlapPercentage.setEnabled(false);
-//                    txtAdjNoiseRecordTime.setEnabled(false);
-//                }
-//            });
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
             // 录制并计算噪声特征
 //            recordAndCalcNoiseFeat();
             // 录制正常声信号
-            recordAndProcessData();
+            try {
+                recordAndProcessData();
+                System.out.println("Data Written.");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             // recordFlag要在录音结束后置0
-            System.out.println("Data Written.");
-            // 设置UI
-//            runOnUiThread(new Runnable() {
-//                @Override
-//                public void run() {
-//                    sbAdjWindowSize.setEnabled(true);
-//                    sbAdjOverlapPercentage.setEnabled(true);
-//                    txtAdjNoiseRecordTime.setEnabled(true);
-//                }
-//            });
         }
     }
 
@@ -469,7 +419,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
      * 如果需要播放就必须加入一些格式或者编码的头信息。但是这样的好处就是你可以对音频的 裸数据进行处理，比如你要做一个爱说话的TOM
      * 猫在这里就进行音频的处理，然后重新封装 所以说这样得到的音频比较容易做一些音频的处理。
      */
-    private void recordAndProcessData() {
+    private void recordAndProcessData() throws IOException {
 //        final Button currentButton = currentButtonWrapper.getButton();
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
         final byte[] inputSignal = new byte[bufferSizeInBytes];
@@ -482,6 +432,20 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         // 实例化录音 大小为接近windowLength的read整数
         AudioRecord mRecorder = new AudioRecord(audioSource, sampleRateInHz,
                 channelConfig, audioFormat, 4 * bufferSizeInBytes);
+//        // 初始话并写入原始音频
+        File recordingFile = new File(Constant.FILE_PATH + currentDataSetName + "_raw/" + recordFlag + ".pcm");
+        System.out.println(recordingFile);
+        File fileParent = recordingFile.getParentFile();
+        if (!fileParent.exists()) {
+            fileParent.mkdirs();
+            System.out.println("创建了原始数据的父文件夹");
+        }
+        recordingFile.createNewFile();
+        DataOutputStream stream = new DataOutputStream(
+                new BufferedOutputStream(
+                        new FileOutputStream(recordingFile)
+                )
+        );
         mRecorder.startRecording();
         while (isRecording) {
             final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
@@ -492,6 +456,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             for (byte anInputSignal : inputSignal) {
 //                totalSignal.add(anInputSignal);
                 signalBuffer.add(anInputSignal);
+                stream.write(anInputSignal);
             }
 //            // 清除噪声
 //            List<Short> inputSignal_16bit = new ArrayList<>();
@@ -509,29 +474,20 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             while (windowLength < signalBuffer.size()) {
                 List<Byte> rawDatalist = signalBuffer.subList(0, windowLength);
                 // 存储数值型数据
-                double[] numericalDatalist = new double[rawDatalist.size() - 1];
+                // 极其重要：numericalDatalist的长度是rawDatalist的一半 否则会出现一半窗口的数值都是0
+                double[] numericalDatalist = new double[rawDatalist.size() / 2];
 //             将原始数据转换成double型数值数据 为了防止rawdata长度是奇数 需要判断时i+1
                 for (int i = 0; i + 1 < rawDatalist.size(); i += 2) {
                     int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
-//                numericalDatalist.add(sig);
                     numericalDatalist[i / 2] = (double) sig;
                 }
                 MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), currentDataSetName, sampleRateInHz, channelConfig, windowLength, overlapPercentage);
-//             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-//                windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
-//                System.out.println(
-//                        "Remain:" + (signalBuffer.size() - windowStart)
-//                                + " | Proccessed:" + windowStart
-//                                + " | Total:" + signalBuffer.size()
-//                );
-//                System.out.println(currentButtonWrapper.getButtonLogicID());
-//             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-//                System.out.println("处理前signalbuffer：" + signalBuffer.size());
                 ArrayList<Byte> newSignalBuffer = new ArrayList<>();
                 windowStart = (int) ((double) windowLength * (1 - (double) overlapPercentage / 100));
                 for (int i = windowStart; i < signalBuffer.size(); ++i) {
                     newSignalBuffer.add(signalBuffer.get(i));
                 }
+                System.out.println("从第" + windowStart + "位截取,新长度为");
                 signalBuffer = newSignalBuffer;
 //                System.out.println("目前signalbuffer：" + signalBuffer.size());
                 // 计算已经录音的时间
@@ -545,98 +501,18 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     });
                 }
             }
-//            // 对采集进来的整体音频信号进行处理 消费若干个窗口
-//            while (windowStart + windowLength < signalBuffer.size()) {
-//                List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
-//                List<Integer> numericalDatalist = new ArrayList<>();
-////             将原始数据转换成数值数据
-//                for (int i = 0; i < rawDatalist.size(); i += 2) {
-//                    int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
-//                    numericalDatalist.add(sig);
-//                }
-//                MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
-////             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-//                windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
-//                System.out.println("Remain:" + (signalBuffer.size() - windowStart));
-//            }
         }
-//        System.out.println("处理噪声");
-//        // 清除噪声
-//        List<Short> inputSignal_16bit = new ArrayList<>();
-//        // 计算真实数值
-//        for (int i = 0; i < signalBuffer.size(); i += 2) {
-//            inputSignal_16bit.add((short) rawAudioDataToShort(signalBuffer.get(i), signalBuffer.get(i + 1)));
-//        }
-//        spectralSubstraction.setSignal(inputSignal_16bit);
-//        // 对inputSignal进行降噪
-//        short[] inputSignal_16bit_denoise = spectralSubstraction.noiseSubtraction();
-//        // 再由真实数值转化为byte数组
-//        signalBuffer.clear();
-//        for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
-//            signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
-//        }
         System.out.println("计算信号特征");
-//        // 对采集进来的整体音频信号进行处理 消费若干个窗口
-//        while (windowStart + windowLength < signalBuffer.size()) {
-//            List<Byte> rawDatalist = signalBuffer.subList(windowStart, windowStart + windowLength);
-//            // 存储数值型数据
-//            double[] numericalDatalist = new double[rawDatalist.size() - 1];
-////             将原始数据转换成double型数值数据 为了防止rawdata长度是奇数 需要判断时i+1
-//            for (int i = 0; i + 1 < rawDatalist.size(); i += 2) {
-//                int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
-////                numericalDatalist.add(sig);
-//                numericalDatalist[i / 2] = (double) sig;
-//            }
-//            MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), sampleRateInHz, channelConfig);
-////             此处考虑滑动窗口的overlap 每次只除去窗口的1-overlapPercentage部分
-//            windowStart += (double) windowLength * (1 - (double) overlapPercentage / 100);
-//            System.out.println("Remain:" + (signalBuffer.size() - windowStart));
-//            final double remainPercentage = (double) (signalBuffer.size() - windowStart) / signalBuffer.size() * 100;
-//            if (remainPercentage - (int) remainPercentage < 0.5) {
-//                runOnUiThread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        currentButton.setText(String.format("%.1f%%", remainPercentage));
-//                    }
-//                });
-//
-//            }
-//        }
         // 停止并释放录音实例
         mRecorder.stop();
         mRecorder.release();
+        stream.close();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 currentButtonWrapper.getButton().setText(currentButtonWrapper.getLabel());
             }
         });
-        // 发送请求
-//        try {
-//
-//            // 原始信号
-//            JSONArray sigSeq = new JSONArray();
-//            JSONArray sigSeq_denoise = new JSONArray();
-//            JSONArray sigSeq_denoise_origin = new JSONArray();
-//            for (int i = 0; i < totalSignal.size(); i += 2) {
-//                sigSeq.put(rawAudioDataToShort(totalSignal.get(i), totalSignal.get(i + 1)));
-//            }
-//            for (int i = 0; i + 2 < signalBuffer.size(); i += 2) {
-//                sigSeq_denoise.put((short) rawAudioDataToShort(signalBuffer.get(i), signalBuffer.get(i + 1)));
-//            }
-//            byte[] buf = ("audio=" + sigSeq.toString() + "&audio_denoise=" + sigSeq_denoise.toString()).getBytes();
-//            URL url = new URL("http://192.168.1.101:5000/audio");
-//            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-//            con.setRequestMethod("POST");
-//            con.setDoOutput(true);
-//            OutputStream out = con.getOutputStream();
-//            out.write(buf);
-//            out.close();
-//            int responseCode = con.getResponseCode();
-//
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     /*
