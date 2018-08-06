@@ -90,7 +90,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     // 最大可调整窗口长度
     final static double maxWindowLengthInSecond = 0.5;
     //    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 2;//0.5/2s;
-    private int windowLength = (int) maxWindowLengthInSecond * sampleRateInHz;//0.5/2s;
+    private int windowLength = (int) (maxWindowLengthInSecond * sampleRateInHz);//0.5s;
     // 步长
     private int overlapPercentage = 50;
     // 噪声消除器
@@ -424,7 +424,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
         final byte[] inputSignal = new byte[bufferSizeInBytes];
 //        ArrayList<Byte> totalSignal = new ArrayList<>();
-        ArrayList<Byte> signalBuffer = new ArrayList<>();
+        ArrayList<Double> signalBuffer = new ArrayList<>();
         System.out.println("windowLength:" + windowLength);
         // 舍弃前面若干帧
         int ignoreFrameCounter = 5;
@@ -453,10 +453,11 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 ignoreFrameCounter--;
                 continue;
             }
-            for (byte anInputSignal : inputSignal) {
+            for (int i = 0; i < inputSignal.length; i += 2) {
 //                totalSignal.add(anInputSignal);
-                signalBuffer.add(anInputSignal);
-                stream.write(anInputSignal);
+                signalBuffer.add((double) rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+                stream.write(inputSignal[i]);
+                stream.write(inputSignal[i + 1]);
             }
 //            // 清除噪声
 //            List<Short> inputSignal_16bit = new ArrayList<>();
@@ -472,27 +473,25 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
 //                signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
 //            }
             while (windowLength < signalBuffer.size()) {
-                List<Byte> rawDatalist = signalBuffer.subList(0, windowLength);
+                List<Double> rawDatalist = signalBuffer.subList(0, windowLength);
                 // 存储数值型数据
-                // 极其重要：numericalDatalist的长度是rawDatalist的一半 否则会出现一半窗口的数值都是0
-                double[] numericalDatalist = new double[rawDatalist.size() / 2];
+                // 极其重要：numericalDatalist的长度是inputSignal的一半 否则会出现一半窗口的数值都是0
+                double[] numericalDatalist = new double[rawDatalist.size()];
 //             将原始数据转换成double型数值数据 为了防止rawdata长度是奇数 需要判断时i+1
-                for (int i = 0; i + 1 < rawDatalist.size(); i += 2) {
-                    int sig = rawAudioDataToShort(rawDatalist.get(i), rawDatalist.get(i + 1));
-                    numericalDatalist[i / 2] = (double) sig;
+                for (int i = 0; i < rawDatalist.size(); ++i) {
+                    numericalDatalist[i] = rawDatalist.get(i);
                 }
-                MakeArffFile.calculate(numericalDatalist, rawDatalist, String.valueOf(recordFlag), currentDataSetName, sampleRateInHz, channelConfig, windowLength, overlapPercentage);
-                ArrayList<Byte> newSignalBuffer = new ArrayList<>();
+                MakeArffFile.calculate(numericalDatalist, null, String.valueOf(recordFlag), currentDataSetName, sampleRateInHz, channelConfig, windowLength, overlapPercentage);
+                ArrayList<Double> newSignalBuffer = new ArrayList<>();
                 windowStart = (int) ((double) windowLength * (1 - (double) overlapPercentage / 100));
                 for (int i = windowStart; i < signalBuffer.size(); ++i) {
                     newSignalBuffer.add(signalBuffer.get(i));
                 }
-                System.out.println("从第" + windowStart + "位截取,新长度为");
                 signalBuffer = newSignalBuffer;
 //                System.out.println("目前signalbuffer：" + signalBuffer.size());
                 // 计算已经录音的时间
                 final double recordingTime = 0.001 * (System.currentTimeMillis() - currentButtonWrapper.getRecordingTime());
-                if (((int) (recordingTime * 10) % 5 == 0)) {
+                if (((int) (recordingTime * 10) % 2 == 0)) {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
