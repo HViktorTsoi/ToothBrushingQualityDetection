@@ -9,7 +9,7 @@ public class Constant {
     public static final String MODEL_PATH = "/sdcard/brushingrecord/model/tree.model";
     public static final String MFCC_TMP_PATH = "/sdcard/brushingrecord/mfcc_temp.wav";
 
-    final static public String[] WEKA_ATTS = {"TMax", "TMin", "TMean", "TSTD", "TMed", "TSke", "TQ1", "TQ3", "TIQR", "FMean1", "FMean2",
+    final static public String[] WEKA_ATTS = {"TMax", "TMin", "TMean", "TSTD", "TMed", "TQ1", "TQ3", "TIQR", "TSke", "FMean1", "FMean2",
             "FMean3", "FMean4", "FMean5", "FMean6", "FMean7", "FSD", "FMed", "FSke", "FIqr"};
 
     final static public String[] WEKA_CLASSES = {"1", "2", "3", "4", "5", "6",
