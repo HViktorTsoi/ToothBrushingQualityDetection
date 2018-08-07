@@ -88,8 +88,8 @@ public class AudioFeature {
 
         for (int i = 0; i < endindex; i++) {
 //            freqrawdata[i] = freqdata[i].abs();
-//            freqrawdata[i] = Math.pow(freqdata[i].abs(), 2) / newrawdata.length;
-            freqrawdata[i] = freqdata[i].abs() * 2 / newrawdata.length;
+            freqrawdata[i] = Math.pow(freqdata[i].abs(), 2) / newrawdata.length;
+//            freqrawdata[i] = freqdata[i].abs() * 2 / newrawdata.length;
         }
 
         for (int i = 0; i < 7; i++) {
