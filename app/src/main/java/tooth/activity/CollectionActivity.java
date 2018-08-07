@@ -34,6 +34,7 @@ import java.util.UUID;
 
 import be.tarsos.dsp.io.android.AndroidFFMPEGLocator;
 import cjh.recorder.R;
+import tooth.util.ParseUtil;
 import tooth.util.PositionButtonWrapper;
 import tooth.util.noise.SpectralSubtraction;
 import weka.Constant;
@@ -394,7 +395,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             assert readsize % 2 == 0;
             // 计算真实数值
             for (int i = 0; i < readsize; i += 2) {
-                noiseSignal.add((short) rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+                noiseSignal.add((short) ParseUtil.rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
             }
             System.out.println(noiseSignal.size() / readsize);
             if (noiseSignal.size() / readsize % 10 == 0) {
@@ -455,7 +456,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             }
             for (int i = 0; i < inputSignal.length; i += 2) {
 //                totalSignal.add(anInputSignal);
-                signalBuffer.add((double) rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+                signalBuffer.add((double) ParseUtil.rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
                 stream.write(inputSignal[i]);
                 stream.write(inputSignal[i + 1]);
             }
@@ -512,27 +513,6 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 currentButtonWrapper.getButton().setText(currentButtonWrapper.getLabel());
             }
         });
-    }
-
-    /*
-     * 将raw数据中的二进制转换为实际的音频信号 由于默认音频格式为16bit 小端存储 因此这里只使用high和low两位
-     * 如果用其他bit宽度需要修改此函数
-     *
-     * */
-    private int rawAudioDataToShort(byte high, byte low) {
-        return (short) (low * 256) + (short) high;
-    }
-
-    /*
-     * 将raw数据中的二进制转换为实际的音频信号 由于默认音频格式为16bit 小端存储 因此这里只使用high和low两位
-     * 如果用其他bit宽度需要修改此函数
-     *
-     * */
-    private List<Byte> shortToRawAudioData(short value) {
-        List<Byte> result = new ArrayList<>();
-        result.add((byte) (value & 0xff)); // 第0位
-        result.add((byte) ((value / 256) & 0xff)); // 第1位
-        return result;
     }
 
     private void switchCurrentButton(PositionButtonWrapper positionButtonWrapper) {
