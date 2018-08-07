@@ -124,4 +124,16 @@ public class MakeArffFile {
             e.printStackTrace();
         }
     }
+
+    public static String[] buildFeatureVector(double[] numericalDatalist) {
+        double t_ret[] = AudioFeature.timedomain(numericalDatalist);
+        double f_ret[] = AudioFeature.freqdomain(numericalDatalist);
+        String[] attr = new String[Constant.WEKA_ATTS.length];
+        for (int i = 0; i < t_ret.length; i++)
+            attr[i] = String.valueOf(t_ret[i]);
+        for (int i = 0; i < f_ret.length; i++)
+            attr[t_ret.length + i] = String.valueOf(f_ret[i]);
+        attr[attr.length - 1] = "?";
+        return attr;
+    }
 }
