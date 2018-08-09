@@ -25,7 +25,6 @@ public class MakeDecision {
         int result_class = -1;
         insertdata(getelement(features, datastructure));
         double classifyResult = currentmodel.classifyInstance(header.firstInstance());
-        System.out.println("Raw Classify Result: " + classifyResult);
         result_class = (int) classifyResult;
         return result_class;
     }
@@ -60,7 +59,7 @@ public class MakeDecision {
     }
 
     private Instance getelement(String[] s, FastVector fv) {
-        Instance temp = new Instance(Constant.WEKA_ATTS.length + 1);
+        Instance temp = new Instance(Constant.WEKA_ATTS.length);
         for (int i = 0; i < s.length - 1; i++) {
             temp.setValue((Attribute) fv.elementAt(i), Double.valueOf(s[i]).doubleValue());
         }

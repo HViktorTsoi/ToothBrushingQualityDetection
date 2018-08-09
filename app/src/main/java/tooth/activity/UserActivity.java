@@ -38,6 +38,7 @@ public class UserActivity extends AppCompatActivity implements View.OnClickListe
         brush.setOnClickListener(this);
         log = (TextView)findViewById(R.id.user_log);
         log.setOnClickListener(this);
+        log.setEnabled(false);
 
     }
 

@@ -89,9 +89,9 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private static int bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz,
             channelConfig, audioFormat);
     // 最大可调整窗口长度
-    final static double maxWindowLengthInSecond = 0.5;
-    //    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 2;//0.5/2s;
-    private int windowLength = (int) (maxWindowLengthInSecond * sampleRateInHz);//0.5s;
+    final static double maxWindowLengthInSecond = 0.8;
+    //    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 2;//0.8/2s;
+    private int windowLength = (int) (maxWindowLengthInSecond * sampleRateInHz);//0.8s;
     // 步长
     private int overlapPercentage = 50;
     // 噪声消除器
@@ -170,7 +170,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         assert sbAdjWindowSize != null;
         // 初始化窗口大小
         int initProgress = (int) ((double) windowLength / (double) sampleRateInHz / maxWindowLengthInSecond * 100);
-        initProgress = discretization(initProgress, 20);
+        initProgress = discretization(initProgress, 12);
         sbAdjWindowSize.setProgress(initProgress);
         txtWindowLength.setText(String.format("%.1fs", progressToWindowSizeInSecond(initProgress)));
         sbAdjWindowSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -178,7 +178,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
                 // 变为5档 即除以20之后取整
-                progress = discretization(progress, 20);
+                progress = discretization(progress, 12);
                 txtWindowLength.setText(String.format("%.1fs", progressToWindowSizeInSecond(progress)));
                 // 计算并设置窗口大小
                 windowLength = (int) (sampleRateInHz * progressToWindowSizeInSecond(progress));
@@ -434,19 +434,19 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         AudioRecord mRecorder = new AudioRecord(audioSource, sampleRateInHz,
                 channelConfig, audioFormat, 4 * bufferSizeInBytes);
 //        // 初始话并写入原始音频
-        File recordingFile = new File(Constant.FILE_PATH + currentDataSetName + "_raw/" + recordFlag + ".pcm");
-        System.out.println(recordingFile);
-        File fileParent = recordingFile.getParentFile();
-        if (!fileParent.exists()) {
-            fileParent.mkdirs();
-            System.out.println("创建了原始数据的父文件夹");
-        }
-        recordingFile.createNewFile();
-        DataOutputStream stream = new DataOutputStream(
-                new BufferedOutputStream(
-                        new FileOutputStream(recordingFile)
-                )
-        );
+//        File recordingFile = new File(Constant.FILE_PATH + currentDataSetName + "_raw/" + recordFlag + ".pcm");
+//        System.out.println(recordingFile);
+//        File fileParent = recordingFile.getParentFile();
+//        if (!fileParent.exists()) {
+//            fileParent.mkdirs();
+//            System.out.println("创建了原始数据的父文件夹");
+//        }
+//        recordingFile.createNewFile();
+//        DataOutputStream stream = new DataOutputStream(
+//                new BufferedOutputStream(
+//                        new FileOutputStream(recordingFile)
+//                )
+//        );
         mRecorder.startRecording();
         while (isRecording) {
             final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
@@ -457,8 +457,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             for (int i = 0; i < inputSignal.length; i += 2) {
 //                totalSignal.add(anInputSignal);
                 signalBuffer.add((double) ParseUtil.rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
-                stream.write(inputSignal[i]);
-                stream.write(inputSignal[i + 1]);
+//                stream.write(inputSignal[i]);
+//                stream.write(inputSignal[i + 1]);
             }
 //            // 清除噪声
 //            List<Short> inputSignal_16bit = new ArrayList<>();
@@ -484,7 +484,8 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 }
                 MakeArffFile.calculate(numericalDatalist, null, String.valueOf(recordFlag), currentDataSetName, sampleRateInHz, channelConfig, windowLength, overlapPercentage);
                 ArrayList<Double> newSignalBuffer = new ArrayList<>();
-                windowStart = (int) ((double) windowLength * (1 - (double) overlapPercentage / 100));
+//                windowStart = (int) ((double) windowLength * (1 - (double) overlapPercentage / 100));
+                windowStart = windowLength * (100 - overlapPercentage) / 100;
                 for (int i = windowStart; i < signalBuffer.size(); ++i) {
                     newSignalBuffer.add(signalBuffer.get(i));
                 }
@@ -506,7 +507,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         // 停止并释放录音实例
         mRecorder.stop();
         mRecorder.release();
-        stream.close();
+//        stream.close();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {

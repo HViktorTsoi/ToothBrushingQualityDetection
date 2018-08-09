@@ -2,83 +2,96 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/blue"
+    android:background="@color/white"
     android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/main_adduser"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_gravity="center"
-        android:gravity="center"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="20dp"
+        android:layout_weight="5"
+        android:orientation="vertical"
         android:paddingLeft="40dp"
-        android:paddingRight="40dp"
-        android:background="@drawable/selector_bg"
-        android:text="@string/main_adduser"
-        android:textColor="@color/black"
-        android:textSize="20sp"/>
+        android:paddingRight="40dp">
 
-    <TextView
-        android:id="@+id/main_chooseuser"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_gravity="center"
-        android:gravity="center"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="20dp"
-        android:paddingLeft="40dp"
-        android:paddingRight="40dp"
-        android:background="@drawable/selector_bg"
-        android:text="@string/main_chooseuser"
-        android:textColor="@color/black"
-        android:textSize="20sp"/>
+        <TextView
+            android:drawableStart="@mipmap/adduser"
+            android:paddingLeft="80sp"
+            android:paddingRight="80sp"
+            android:id="@+id/main_adduser"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:layout_marginBottom="20dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/selector_primary"
+            android:gravity="center"
+            android:text="@string/main_adduser"
+            android:textColor="@color/white"
+            android:textSize="20sp" />
 
-    <TextView
-        android:id="@+id/main_datacollection"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_gravity="center"
-        android:gravity="center"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="20dp"
-        android:paddingLeft="40dp"
-        android:paddingRight="40dp"
-        android:background="@drawable/selector_bg"
-        android:text="@string/main_datacollection"
-        android:textColor="@color/black"
-        android:textSize="20sp"/>
+        <TextView
+            android:drawableStart="@mipmap/user"
+            android:paddingLeft="80sp"
+            android:paddingRight="80sp"
+            android:id="@+id/main_chooseuser"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_gravity="center"
+            android:layout_marginBottom="20dp"
+            android:layout_marginTop="20dp"
+            android:layout_weight="1"
+            android:background="@drawable/selector_primary"
+            android:gravity="center"
+            android:text="@string/main_chooseuser"
+            android:textColor="@color/white"
+            android:textSize="20sp" />
 
-    <TextView
-        android:id="@+id/main_startbrushing"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_gravity="center"
-        android:gravity="center"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="20dp"
-        android:paddingLeft="40dp"
-        android:paddingRight="40dp"
-        android:background="@drawable/selector_bg"
-        android:text="@string/main_startbrushing"
-        android:textColor="@color/black"
-        android:textSize="20sp"/>
+        <TextView
+            android:drawableStart="@mipmap/data"
+            android:paddingLeft="80sp"
+            android:paddingRight="80sp"
+            android:id="@+id/main_datacollection"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_gravity="center"
+            android:layout_marginBottom="20dp"
+            android:layout_marginTop="20dp"
+            android:layout_weight="1"
+            android:background="@drawable/selector_info"
+            android:gravity="center"
+            android:text="@string/main_datacollection"
+            android:textColor="@color/white"
+            android:textSize="20sp" />
+
+        <TextView
+            android:drawableStart="@mipmap/tooth"
+            android:paddingLeft="80sp"
+            android:paddingRight="80sp"
+            android:id="@+id/main_startbrushing"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_gravity="center"
+            android:layout_marginBottom="20dp"
+            android:layout_marginTop="20dp"
+            android:layout_weight="1"
+            android:background="@drawable/selector_success"
+            android:gravity="center"
+            android:text="@string/main_startbrushing"
+            android:textColor="@color/white"
+            android:textSize="20sp" />
+    </LinearLayout>
 
     <ImageView
         android:id="@+id/main_chooseuser_img"
         android:layout_width="200dp"
         android:layout_height="0dp"
-        android:layout_weight="2"
         android:layout_gravity="center"
-        android:layout_marginTop="20dp"
         android:layout_marginBottom="20dp"
-        android:paddingTop="15dp"
+        android:layout_marginTop="20dp"
+        android:layout_weight="2"
         android:paddingBottom="15dp"
-        android:src="@drawable/tooth1"/>
+        android:paddingTop="15dp"
+        android:src="@drawable/tooth1" />
 
 </LinearLayout>

@@ -18,8 +18,9 @@ public class Constants {
     public static String TAG = "TOOTH_TEST";
 
     public static String TOTAL_TIME = "total_time";
+    public static String BRUSHING_TIME = "brushing_time";
     public static String SCORES = "scores";
-    public static String STRINGS = "strings";
+    public static String FINISHED = "strings";
 
     public static int USER_NUM = 0;
 

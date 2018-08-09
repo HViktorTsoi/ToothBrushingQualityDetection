@@ -1,36 +1,31 @@
 package tooth.activity;
 
-import android.content.Context;
+import android.app.Service;
 import android.content.Intent;
 import android.media.AudioFormat;
-import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.os.Environment;
-import android.os.Handler;
-import android.os.Message;
+import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.File;
+import org.w3c.dom.Text;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
 
-import tooth.data.ServerInterface;
 import tooth.util.Constants;
 import cjh.recorder.R;
 import tooth.util.ParseUtil;
-import weka.AudioFeature;
+import tooth.util.PositionButtonWrapper;
+import weka.Constant;
 import weka.MakeArffFile;
 import weka.MakeDecision;
-
-import static tooth.util.ParseUtil.rawAudioDataToShort;
 
 /**
  * Created by admin on 2017/10/13.
@@ -39,38 +34,19 @@ import static tooth.util.ParseUtil.rawAudioDataToShort;
 
 public class DisplayActivity extends AppCompatActivity {
 
-    private ImageView imageView1, imageView2;
-
     private ImageView inner_dfi, inner_dlbi, inner_drbi, inner_ufi, inner_ulbi, inner_urbi;
     private ImageView outer_dfo, outer_dlb, outer_drb, outer_ufo, outer_ulb, outer_urb;
 
-    private Button button, button_result;
-
-    private String filePath;
-    private Timer timer;
-    private int imageFlag = 0;
-    private boolean imgFlag = false;
+    private Button buttonStartDetect;
+    private TextView txtPositionStatus;
 
     private boolean[] flagList = new boolean[19];
 
-    private int time_seconds = 0;
-    private int scores = 0;
+    int[] counterAtPosition = new int[Constant.WEKA_CLASSES.length + 1];
+    double[] timeAtPosition = new double[Constant.WEKA_CLASSES.length + 1];
+    boolean[] finishedFlags = new boolean[Constant.WEKA_CLASSES.length + 1];
 
-    int[] count = new int[18];
-
-    private MyThread thread_count;
-    private MyThread_getCurrentState thread_getCurrentState;
-    private MyThread_getLatestScore thread_getLatestScore;
-
-    private boolean picFlag = false;
-
-
-    File extDir = Environment.getExternalStorageDirectory();
-
-    private String TAG = "BluetoothRecord";
-    private AudioRecord mRecorder = null;
-    private AudioManager mAudioManager = null;
-    private static String mFileName = null;
+    Vibrator vibrator = null;
 
     // 音频获取源
     private static int audioSource = MediaRecorder.AudioSource.MIC;
@@ -84,19 +60,17 @@ public class DisplayActivity extends AppCompatActivity {
     private static int bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz,
             channelConfig, audioFormat);
 
-    private int windowLength = sampleRateInHz / 2;//3000;
-    private int overlapPercentage = 50;//3000;
-    private ArrayList<Byte> data = new ArrayList<>();
+    private int windowLength = 17288;//3000;
+    private int overlapPercentage = 0;//3000;
 
-    private static boolean isRecording = false;
+    private double brushingTime = 0;
+    private boolean isRecording = false;
+    private Thread recordThreadExecutor;
+    MakeDecision predictModel;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.display_layout);
-
-        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        imageView1 = (ImageView) findViewById(R.id.img1);
-        imageView2 = (ImageView) findViewById(R.id.img2);
 
         inner_dfi = (ImageView) findViewById(R.id.inner_dfi);
         inner_dlbi = (ImageView) findViewById(R.id.inner_dlbi);
@@ -113,80 +87,126 @@ public class DisplayActivity extends AppCompatActivity {
         outer_urb = (ImageView) findViewById(R.id.outer_urb);
 
 
-        button = (Button) findViewById(R.id.audiorecorder);
-        button.setOnClickListener(new View.OnClickListener() {
+        buttonStartDetect = (Button) findViewById(R.id.audiorecorder);
+        buttonStartDetect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (!isRecording) {
-                    button.setText("数据采集中");
-                    isRecording = true;
-//                    thread_count = new MyThread();         // start thread
-//                    thread_count.start();
-//                    thread_getCurrentState = new MyThread_getCurrentState();
-//                    thread_getCurrentState.start();
-                    new Thread(new RecordThread()).start();
-
+                    try {
+                        isRecording = true;
+                        recordThreadExecutor = new Thread(new RecordThread());
+                        recordThreadExecutor.start();
+                        brushingTime = System.currentTimeMillis();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 } else {
-                    button.setText("开始采集");
-                    //stopRecording();
-                    //thread_count.interrupt();
-                    isRecording = false;
-//                    thread_getLatestScore = new MyThread_getLatestScore();
-//                    thread_getLatestScore.start();
-                    //count_scores();
+                    try {
+                        brushingTime = System.currentTimeMillis() - brushingTime;
+                        isRecording = false;
+                        recordThreadExecutor.join();
+                        buttonStartDetect.setText("开始检测");
+                        buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
+                        txtPositionStatus.setText("");
+                        showResultActivity();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         });
 
-        button_result = (Button) findViewById(R.id.display_result);
-        button_result.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(DisplayActivity.this, BrushResultActivity.class);
-                Bundle bundle = new Bundle();
-                bundle.putInt(Constants.TOTAL_TIME, time_seconds);
-                bundle.putInt(Constants.SCORES, scores);
-                bundle.putBooleanArray(Constants.STRINGS, flagList);
-                intent.putExtras(bundle);
-                startActivity(intent);
-            }
-        });
-        button_result.setClickable(false);
-
+        txtPositionStatus = (TextView) findViewById(R.id.txtPositionStatus);
     }
 
-    private void count_scores() {
-        for (int i = 3; i < 19; i++) {
-            if (flagList[i]) {
-                scores++;
-            }
-        }
-        scores = (int) (scores / 16.0 * 100);
+    private void showResultActivity() {
+        Intent intent = new Intent(DisplayActivity.this, BrushResultActivity.class);
+        Bundle bundle = new Bundle();
+        bundle.putDoubleArray(Constants.TOTAL_TIME, timeAtPosition);
+        bundle.putBooleanArray(Constants.FINISHED, finishedFlags);
+        bundle.putDouble(Constants.BRUSHING_TIME, brushingTime);
+        intent.putExtras(bundle);
+        startActivity(intent);
     }
 
     class RecordThread implements Runnable {
         @Override
         public void run() {
             try {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        buttonStartDetect.setText("载入模型...");
+                        buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.blue));
+                        buttonStartDetect.setClickable(false);
+                    }
+                });
+                predictModel = new MakeDecision();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        buttonStartDetect.setText("检测中...");
+                        buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                        buttonStartDetect.setClickable(true);
+                    }
+                });
                 recordAndRecognize();
-                System.out.println("writeDataToFile");
             } catch (Exception e) {
+                Toast.makeText(DisplayActivity.this, "未找到模型文件!!!", Toast.LENGTH_SHORT).show();
+                buttonStartDetect.setText("开始检测");
+                buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
                 e.printStackTrace();
             }
         }
     }
 
-    private void countAndProcess(int class_type) {
-        count[class_type % 18]++;
-        if (count[class_type % 18] >= 2) {
-            switchPictures(class_type % 18 + 1);
-            count[class_type % 18] = 0;
+    private void countAndProcess(final int class_type) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                txtPositionStatus.setText("实时: " + PositionButtonWrapper.labelList[class_type]);
+            }
+        });
+        int threshold = 2;
+        double maxTimeEachPosition = 3;
+        if (counterAtPosition[class_type] >= threshold) {
+            counterAtPosition[class_type]++;
+            timeAtPosition[class_type] += counterAtPosition[class_type] * 0.5;
+            counterAtPosition[class_type] = 0;
+        } else {
+            // 将其他类别置0
+            for (int i = 0; i < counterAtPosition.length; ++i) {
+                if (i != class_type) {
+                    counterAtPosition[i] = 0;
+                }
+            }
+            // 当前类别+1
+            counterAtPosition[class_type]++;
+        }
+        if (timeAtPosition[class_type] >= maxTimeEachPosition) {
+            // 如果达到指定的刷牙时间
+            if (class_type >= 3 && !finishedFlags[class_type]) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        switchPictures(class_type);
+                        vibrator = (Vibrator) getSystemService(Service.VIBRATOR_SERVICE);
+                        vibrator.vibrate(500);
+                    }
+                });
+            }
+            finishedFlags[class_type] = true;
+        }
+        for (int i = 0; i < counterAtPosition.length; ++i) {
+            System.out.print(counterAtPosition[i] + " ");
+        }
+        System.out.println();
+        for (int i = 0; i < counterAtPosition.length; ++i) {
+            System.out.print(timeAtPosition[i] + " ");
         }
     }
 
     private void recordAndRecognize() throws Exception {
-        // 初始化预测模型
-        MakeDecision predictModel = new MakeDecision();
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
         final byte[] inputSignal = new byte[bufferSizeInBytes];
 //        ArrayList<Byte> totalSignal = new ArrayList<>();
@@ -234,8 +254,9 @@ public class DisplayActivity extends AppCompatActivity {
                 // 在这里处理
                 String[] features = MakeArffFile.buildFeatureVector(numericalDatalist);
                 int class_type = predictModel.predict(features);
-//                this.countAndProcess(class_type);
-                System.out.println("预测结果" + class_type);
+                class_type = Integer.valueOf(Constant.WEKA_CLASSES[class_type]);
+                this.countAndProcess(class_type);
+                System.out.println("预测结果: " + class_type + " => " + PositionButtonWrapper.labelList[class_type]);
                 // 窗口后移
                 ArrayList<Double> newSignalBuffer = new ArrayList<>();
                 windowStart = (int) ((double) windowLength * (1 - (double) overlapPercentage / 100));
@@ -378,81 +399,19 @@ public class DisplayActivity extends AppCompatActivity {
 
     }
 
-    final Handler handler = new Handler() {          // handle
-        public void handleMessage(Message msg) {
-            if (msg.what == 0) {
-                time_seconds++;
-            }
-            super.handleMessage(msg);
-        }
-    };
-
-    class MyThread extends Thread {      // thread
-
-        @Override
-        public void run() {
-            while (isRecording) {
-                try {
-                    Thread.sleep(1000);     // sleep 1000ms
-                    Message message = new Message();
-                    message.what = 0;
-                    handler.sendMessage(message);
-                    //Thread.sleep(200);
-                } catch (Exception e) {
-                    System.out.println(e.toString());
-                }
-            }
-        }
-    }
-
-    final Handler handler_getCurrentState = new Handler() {          // handle
-        public void handleMessage(Message msg) {
-            switchPictures(msg.what + 1);
-            Log.i(Constants.TAG, "getCurrentState_thread result :" + msg.what);
-        }
-    };
-
-    class MyThread_getCurrentState extends Thread {      // thread
-
-        @Override
-        public void run() {
-            while (isRecording) {
-                Log.i(Constants.TAG, "getCurrentState_thread runing ...");
-                try {
-                    Thread.sleep(1000);     // sleep 1000ms
-
-                    Message message = new Message();
-                    message.what = ServerInterface.getCurrentState();
-                    handler_getCurrentState.sendMessage(message);
-
-                } catch (Exception e) {
-                    System.out.println(e.toString());
-                }
-            }
-        }
-    }
-
-    final Handler handler_getLatestScore = new Handler() {          // handle
-        public void handleMessage(Message msg) {
-            scores = msg.what;
-            button_result.setClickable(true);
-            Toast.makeText(DisplayActivity.this, "已结束", Toast.LENGTH_SHORT).show();
-        }
-    };
-
-    class MyThread_getLatestScore extends Thread {      // thread
-
-        @Override
-        public void run() {
-            Log.i(Constants.TAG, "getLastScore_thread runing ...");
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Toast.makeText(this, "正在处理未停止的录音进程", Toast.LENGTH_SHORT).show();
+        System.out.println("停止录音");
+        this.isRecording = false;
+        if (this.recordThreadExecutor != null) {
             try {
-                Message message = new Message();
-                message.what = ServerInterface.getLatestScore();
-                handler_getLatestScore.sendMessage(message);
-
-            } catch (Exception e) {
-                System.out.println(e.toString());
+                this.recordThreadExecutor.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
+
 }

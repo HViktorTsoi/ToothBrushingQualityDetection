@@ -8,7 +8,7 @@ import android.widget.Button;
  */
 public class PositionButtonWrapper {
 
-    final static private String[] labelList = {
+    final static public String[] labelList = {
             "",
             "噪声", "漱口", "上左后外",
             "上前外", "上右后外", "上左后中",

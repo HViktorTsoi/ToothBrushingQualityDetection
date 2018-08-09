@@ -17,7 +17,7 @@
         android:paddingLeft="40dp"
         android:paddingRight="40dp"
         android:paddingBottom="15dp"
-        android:background="@drawable/selector_bg"
+        android:background="@drawable/selector_primary"
         android:text="@string/user_brush"
         android:textColor="@color/black"
         android:textSize="20sp"/>
@@ -34,7 +34,7 @@
         android:paddingLeft="40dp"
         android:paddingRight="40dp"
         android:paddingBottom="15dp"
-        android:background="@drawable/selector_bg"
+        android:background="@drawable/selector_primary"
         android:text="@string/user_log"
         android:textColor="@color/black"
         android:textSize="20sp"/>

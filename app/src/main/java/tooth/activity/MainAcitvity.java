@@ -125,27 +125,6 @@ public class MainAcitvity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        /*MenuInflater in = getMenuInflater();
-        in.inflate(R.menu.menu_layout, menu);*/
-        super.onCreateOptionsMenu(menu);
-        int group = 1;
-        item1 = menu.add(group, 1, 1, "清除用户");
-
-        //SharedPreferences userSettings= getSharedPreferences("setting",0);
-        //int option = userSettings.getInt("option",1);
-        //menu.setGroupCheckable(group,true,true);
-        /*switch (option){
-            case 1:
-                item1.setChecked(true);
-                break;
-        }*/
-
-        return true;
-
-    }
-
-    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case 1:
