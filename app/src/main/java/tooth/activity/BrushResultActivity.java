@@ -47,7 +47,7 @@ public class BrushResultActivity extends AppCompatActivity {
         txtQualitified.setText(buildStringResult(finished, timeAtPosition, true));
         txtUnQualitified.setText(buildStringResult(finished, timeAtPosition, false));
 
-        scrores.setText("得分: " + StatUtils.sum(timeAtPosition) * 10 + "分");
+        scrores.setText(String.format("得分: %.1f分", countingScores(finished, timeAtPosition)));
         totaltime.setText("总时间: " + timeFormat((int) brushingTime / 1000));
     }
 
@@ -75,6 +75,19 @@ public class BrushResultActivity extends AppCompatActivity {
         } else {
             return result.toString();
         }
+    }
+
+    private double countingScores(boolean[] finished, double[] timeAtPosition) {
+        double sum = 0;
+        double threshold = 15;
+        for (int i = 0; i < finished.length; ++i) {
+            if (finished[i]) {
+                sum += (timeAtPosition[i] > 15 ? 15 : timeAtPosition[i]);
+            } else {
+                sum += 0 * timeAtPosition[i];
+            }
+        }
+        return sum * 5;
     }
 
 }
