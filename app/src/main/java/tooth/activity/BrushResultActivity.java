@@ -80,14 +80,14 @@ public class BrushResultActivity extends AppCompatActivity {
     private double countingScores(boolean[] finished, double[] timeAtPosition) {
         double sum = 0;
         double threshold = 15;
-        for (int i = 0; i < finished.length; ++i) {
+        for (int i = 3; i < finished.length; ++i) {
             if (finished[i]) {
                 sum += (timeAtPosition[i] > 15 ? 15 : timeAtPosition[i]);
             } else {
                 sum += 0 * timeAtPosition[i];
             }
         }
-        return sum * 5;
+        return sum * 100 / (5 * 16);
     }
 
 }

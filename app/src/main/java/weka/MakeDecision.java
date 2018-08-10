@@ -75,6 +75,9 @@ public class MakeDecision {
 
     private SerializedClassifier readmodel(String modelfile) throws Exception {
         File mfile = new File(modelfile);
+        if (!mfile.exists()) {
+            throw new Exception("未找到模型位置: " + modelfile);
+        }
         SerializedClassifier md = new SerializedClassifier();
         md.setModelFile(mfile);
         return md;

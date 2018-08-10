@@ -477,11 +477,17 @@ public class DisplayActivity extends AppCompatActivity {
                             buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
                         }
                     });
-                } catch (Exception e) {
-                    msgDialog.setTitle("错误");
-                    msgDialog.setMessage("载入模型时发生错误: " + e.getMessage());
-                    msgDialog.show();
+                } catch (final Exception e) {
                     e.printStackTrace();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            msgDialog.setCancelable(true);
+                            msgDialog.setTitle("错误");
+                            msgDialog.setMessage("载入模型时发生错误: " + e.getMessage());
+                            msgDialog.show();
+                        }
+                    });
                 }
             }
         });
