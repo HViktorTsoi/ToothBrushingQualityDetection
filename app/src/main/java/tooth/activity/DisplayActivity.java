@@ -152,9 +152,14 @@ public class DisplayActivity extends AppCompatActivity {
                 });
                 recordAndRecognize();
             } catch (Exception e) {
-                Toast.makeText(DisplayActivity.this, "未找到模型文件!!!", Toast.LENGTH_SHORT).show();
-                buttonStartDetect.setText("开始检测");
-                buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(DisplayActivity.this, "未找到模型文件!!!", Toast.LENGTH_SHORT).show();
+                        buttonStartDetect.setText("开始检测");
+                        buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
+                    }
+                });
                 e.printStackTrace();
             }
         }

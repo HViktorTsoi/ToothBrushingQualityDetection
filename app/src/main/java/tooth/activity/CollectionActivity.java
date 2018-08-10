@@ -12,8 +12,10 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,6 +48,8 @@ import weka.MakeArffFile;
  */
 
 public class CollectionActivity extends AppCompatActivity implements View.OnClickListener {
+    // 保存原始音频的流
+    DataOutputStream rawDataStream;
     // 录音线程;
     RecordThread recordThread;
     Thread recordThreadExecutor;
@@ -70,12 +74,13 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     private SeekBar sbAdjWindowSize, sbAdjOverlapPercentage;
     private EditText txtAdjNoiseRecordTime;
     private TextView txtWindowLength, txtCurOverlapPercentage;
+    private Switch switchSaveRawAudio;
     private String TAG = "ToothRecord";
     private ProgressDialog waitingDialog;
     // 正在记录的位置类型
     private int recordFlag = 0;
     public boolean isRecording = false;
-
+    private boolean isSaveRawAudioData = false;
     // 数据采集配置
     // 音频获取源
     private static int audioSource = MediaRecorder.AudioSource.MIC;
@@ -91,7 +96,7 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     // 最大可调整窗口长度
     final static double maxWindowLengthInSecond = 0.8;
     //    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 2;//0.8/2s;
-    private int windowLength = (int) (maxWindowLengthInSecond * sampleRateInHz);//0.8s;
+    private int windowLength = (int) (maxWindowLengthInSecond / 2 * sampleRateInHz);//0.8s/2;
     // 步长
     private int overlapPercentage = 50;
     // 噪声消除器
@@ -241,6 +246,14 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         });
         sbAdjWindowSize.setFocusable(true);
         sbAdjWindowSize.requestFocus();
+        // 配置保存原始音频按钮
+        switchSaveRawAudio = (Switch) findViewById(R.id.switchSaveRaw);
+        switchSaveRawAudio.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                isSaveRawAudioData = isChecked;
+            }
+        });
     }
 
     /*
@@ -274,8 +287,10 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     currentDataSetName += ".arff";
                     buttonControl.setText("停止");
                     buttonControl.setBackgroundColor(getResources().getColor(R.color.light_green));
+                    // 设置配置项是否可用
                     sbAdjWindowSize.setEnabled(false);
                     sbAdjOverlapPercentage.setEnabled(false);
+                    switchSaveRawAudio.setEnabled(false);
                     txtAdjNoiseRecordTime.setEnabled(false);
                 } else {
                     // 设置停止记录
@@ -287,8 +302,10 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                     }
                     buttonControl.setText("开始");
                     buttonControl.setBackgroundColor(getResources().getColor(R.color.gray));
+                    // 设置配置项是否可用
                     sbAdjWindowSize.setEnabled(true);
                     sbAdjOverlapPercentage.setEnabled(true);
+                    switchSaveRawAudio.setEnabled(true);
                     txtAdjNoiseRecordTime.setEnabled(true);
                 }
             }
@@ -348,6 +365,14 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
                 System.out.println("Data Written.");
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (final Exception e) {
+                e.printStackTrace();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(CollectionActivity.this, "发生严重错误: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
             // recordFlag要在录音结束后置0
         }
@@ -433,20 +458,22 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
         // 实例化录音 大小为接近windowLength的read整数
         AudioRecord mRecorder = new AudioRecord(audioSource, sampleRateInHz,
                 channelConfig, audioFormat, 4 * bufferSizeInBytes);
-//        // 初始话并写入原始音频
-//        File recordingFile = new File(Constant.FILE_PATH + currentDataSetName + "_raw/" + recordFlag + ".pcm");
-//        System.out.println(recordingFile);
-//        File fileParent = recordingFile.getParentFile();
-//        if (!fileParent.exists()) {
-//            fileParent.mkdirs();
-//            System.out.println("创建了原始数据的父文件夹");
-//        }
-//        recordingFile.createNewFile();
-//        DataOutputStream stream = new DataOutputStream(
-//                new BufferedOutputStream(
-//                        new FileOutputStream(recordingFile)
-//                )
-//        );
+        if (isSaveRawAudioData) {
+            // 如果设置为写入原始音频 则初始化并写入原始音频
+            File recordingFile = new File(Constant.FILE_PATH + currentDataSetName + "_raw/" + recordFlag + ".pcm");
+            System.out.println(recordingFile);
+            File fileParent = recordingFile.getParentFile();
+            if (!fileParent.exists()) {
+                fileParent.mkdirs();
+                System.out.println("创建了原始数据的父文件夹");
+            }
+            recordingFile.createNewFile();
+            rawDataStream = new DataOutputStream(
+                    new BufferedOutputStream(
+                            new FileOutputStream(recordingFile)
+                    )
+            );
+        }
         mRecorder.startRecording();
         while (isRecording) {
             final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
@@ -457,8 +484,10 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             for (int i = 0; i < inputSignal.length; i += 2) {
 //                totalSignal.add(anInputSignal);
                 signalBuffer.add((double) ParseUtil.rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
-//                stream.write(inputSignal[i]);
-//                stream.write(inputSignal[i + 1]);
+                if (isSaveRawAudioData) {
+                    rawDataStream.write(inputSignal[i]);
+                    rawDataStream.write(inputSignal[i + 1]);
+                }
             }
 //            // 清除噪声
 //            List<Short> inputSignal_16bit = new ArrayList<>();
@@ -504,10 +533,12 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
             }
         }
         System.out.println("计算信号特征");
+        if (isSaveRawAudioData) {
+            rawDataStream.close();
+        }
         // 停止并释放录音实例
         mRecorder.stop();
         mRecorder.release();
-//        stream.close();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {

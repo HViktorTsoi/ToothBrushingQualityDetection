@@ -33,10 +33,10 @@
     <string name="display_start">开始检测</string>
     <string name="display_result">查看结果</string>
 
-    <string name="brushresult_totaltime">总时间</string>
+    <string name="brushresult_totaltime">刷牙总时间</string>
     <string name="brushresult_grade">分数</string>
     <string name="quatified_brushresult_strings">✔ 合格牙面</string>
-    <string name="unquatified_brushresult_strings">ㄨ 不合格牙面</string>
+    <string name="unquatified_brushresult_strings">×不合格牙面</string>
     <string name="brushresult_fen">分</string>
     <string name="brushresult_ulbo">上左后外</string>
     <string name="brushresult_ufo">上前外</string>
@@ -64,5 +64,6 @@
     <string name="log_time">时间</string>
     <string name="log_duration">时长</string>
     <string name="log_grade">分数</string>
+    <string name="save_origin">原始音频</string>
 
 </resources>
