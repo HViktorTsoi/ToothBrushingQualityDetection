@@ -152,7 +152,7 @@ public class DisplayActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         buttonStartDetect.setText("检测中, 点击结束...");
-                        buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                        buttonStartDetect.setBackground(getResources().getDrawable(R.drawable.selector_primary));
                         buttonStartDetect.setClickable(true);
                     }
                 });
@@ -164,7 +164,7 @@ public class DisplayActivity extends AppCompatActivity {
                         // 处理发生的异常
                         isRecording = false;
                         buttonStartDetect.setText("开始检测");
-                        buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
+                        buttonStartDetect.setBackground(getResources().getDrawable(R.drawable.selector_success));
                         msgDialog.setTitle("错误");
                         msgDialog.setMessage(e.getMessage());
                         msgDialog.show();
