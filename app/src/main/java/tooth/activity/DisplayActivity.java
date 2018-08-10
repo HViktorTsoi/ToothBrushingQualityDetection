@@ -1,5 +1,6 @@
 package tooth.activity;
 
+import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.Intent;
 import android.media.AudioFormat;
@@ -8,13 +9,13 @@ import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,8 @@ public class DisplayActivity extends AppCompatActivity {
 
     private Button buttonStartDetect;
     private TextView txtPositionStatus;
+
+    private ProgressDialog msgDialog;
 
     private boolean[] flagList = new boolean[19];
 
@@ -66,7 +69,8 @@ public class DisplayActivity extends AppCompatActivity {
     private double brushingTime = 0;
     private boolean isRecording = false;
     private Thread recordThreadExecutor;
-    MakeDecision predictModel;
+
+    RecordApplication application;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -117,6 +121,17 @@ public class DisplayActivity extends AppCompatActivity {
         });
 
         txtPositionStatus = (TextView) findViewById(R.id.txtPositionStatus);
+
+        // 初始化全局application
+        application = RecordApplication.getApplication();
+        // 消息窗口
+        msgDialog = new ProgressDialog(DisplayActivity.this);
+        // 检测预测模型是否已经载入
+        if (application.getPredictModel() == null) {
+            buttonStartDetect.setEnabled(false);
+            buttonStartDetect.setText("未载入模型");
+            buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.gray));
+        }
     }
 
     private void showResultActivity() {
@@ -136,28 +151,23 @@ public class DisplayActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        buttonStartDetect.setText("载入模型...");
-                        buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.blue));
-                        buttonStartDetect.setClickable(false);
-                    }
-                });
-                predictModel = new MakeDecision();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        buttonStartDetect.setText("检测中...");
+                        buttonStartDetect.setText("检测中, 点击结束...");
                         buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
                         buttonStartDetect.setClickable(true);
                     }
                 });
                 recordAndRecognize();
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(DisplayActivity.this, "未找到模型文件!!!", Toast.LENGTH_SHORT).show();
+                        // 处理发生的异常
+                        isRecording = false;
                         buttonStartDetect.setText("开始检测");
                         buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
+                        msgDialog.setTitle("错误");
+                        msgDialog.setMessage(e.getMessage());
+                        msgDialog.show();
                     }
                 });
                 e.printStackTrace();
@@ -166,12 +176,13 @@ public class DisplayActivity extends AppCompatActivity {
     }
 
     private void countAndProcess(final int class_type) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                txtPositionStatus.setText("实时: " + PositionButtonWrapper.labelList[class_type]);
-            }
-        });
+        // 暂时取消实时牙面显示
+        //        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                txtPositionStatus.setText("实时: " + PositionButtonWrapper.labelList[class_type]);
+//            }
+//        });
         int threshold = 2;
         double maxTimeEachPosition = 3;
         if (counterAtPosition[class_type] >= threshold) {
@@ -258,7 +269,7 @@ public class DisplayActivity extends AppCompatActivity {
                 }
                 // 在这里处理
                 String[] features = MakeArffFile.buildFeatureVector(numericalDatalist);
-                int class_type = predictModel.predict(features);
+                int class_type = application.getPredictModel().predict(features);
                 class_type = Integer.valueOf(Constant.WEKA_CLASSES[class_type]);
                 this.countAndProcess(class_type);
                 System.out.println("预测结果: " + class_type + " => " + PositionButtonWrapper.labelList[class_type]);
@@ -417,6 +428,64 @@ public class DisplayActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(1, 100, 1, "载入模型");//动态添加一个按钮；
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case 100:
+                System.out.println("载入模型");
+                loadModel();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    /*载入模型
+     */
+    private void loadModel() {
+        Thread loadModelThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            msgDialog.setTitle("载入模型中...");
+                            msgDialog.setMessage("请等待...");
+                            msgDialog.setIndeterminate(true);
+                            msgDialog.setCancelable(false);
+                            msgDialog.show();
+                        }
+                    });
+                    application.setPredictModel(new MakeDecision());
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            msgDialog.setMessage("载入成功");
+                            msgDialog.dismiss();
+                            buttonStartDetect.setEnabled(true);
+                            buttonStartDetect.setText("开始检测");
+                            buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
+                        }
+                    });
+                } catch (Exception e) {
+                    msgDialog.setTitle("错误");
+                    msgDialog.setMessage("载入模型时发生错误: " + e.getMessage());
+                    msgDialog.show();
+                    e.printStackTrace();
+                }
+            }
+        });
+        loadModelThread.start();
     }
 
 }

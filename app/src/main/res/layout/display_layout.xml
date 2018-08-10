@@ -114,8 +114,8 @@
 
         <Button
             android:drawableStart="@mipmap/tooth"
-            android:paddingLeft="100sp"
-            android:paddingRight="100sp"
+            android:paddingLeft="20sp"
+            android:paddingRight="20sp"
             android:id="@+id/audiorecorder"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
