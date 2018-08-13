@@ -7,6 +7,9 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
@@ -18,7 +21,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import tooth.util.Constants;
 import cjh.recorder.R;
@@ -43,11 +48,10 @@ public class DisplayActivity extends AppCompatActivity {
 
     private ProgressDialog msgDialog;
 
-    private boolean[] flagList = new boolean[19];
-
     int[] counterAtPosition = new int[Constant.WEKA_CLASSES.length + 1];
     double[] timeAtPosition = new double[Constant.WEKA_CLASSES.length + 1];
     boolean[] finishedFlags = new boolean[Constant.WEKA_CLASSES.length + 1];
+    Map<ImageView, Integer> currentImageResources = new HashMap<>();
 
     Vibrator vibrator = null;
 
@@ -69,8 +73,11 @@ public class DisplayActivity extends AppCompatActivity {
     private double brushingTime = 0;
     private boolean isRecording = false;
     private Thread recordThreadExecutor;
+    private Thread blinkThreadExecutor;
 
     RecordApplication application;
+    // 处理闪烁
+    private Handler blinkHandler;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,8 +96,7 @@ public class DisplayActivity extends AppCompatActivity {
         outer_ufo = (ImageView) findViewById(R.id.outer_ufo);
         outer_ulb = (ImageView) findViewById(R.id.outer_ulb);
         outer_urb = (ImageView) findViewById(R.id.outer_urb);
-
-
+        initCurrentImageMap();
         buttonStartDetect = (Button) findViewById(R.id.audiorecorder);
         buttonStartDetect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -100,7 +106,18 @@ public class DisplayActivity extends AppCompatActivity {
                         isRecording = true;
                         recordThreadExecutor = new Thread(new RecordThread());
                         recordThreadExecutor.start();
+                        // 控制闪烁
+                        blinkThreadExecutor = new Thread(new BlinkThread());
+                        blinkThreadExecutor.start();
                         brushingTime = System.currentTimeMillis();
+                        // 初始化flag以及牙面
+                        switchPictures(2);
+                        for (int i = 0; i < finishedFlags.length; ++i) {
+                            finishedFlags[i] = false;
+                            counterAtPosition[i] = 0;
+                            timeAtPosition[i] = 0;
+                        }
+                        initCurrentImageMap();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -132,6 +149,23 @@ public class DisplayActivity extends AppCompatActivity {
             buttonStartDetect.setText("未载入模型");
             buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.gray));
         }
+    }
+
+    private void initCurrentImageMap() {
+        // 初始化状态map
+        currentImageResources.put(inner_dfi, -1);
+        currentImageResources.put(inner_dlbi, -1);
+        currentImageResources.put(inner_drbi, -1);
+        currentImageResources.put(inner_ufi, -1);
+        currentImageResources.put(inner_ulbi, -1);
+        currentImageResources.put(inner_urbi, -1);
+
+        currentImageResources.put(outer_dfo, -1);
+        currentImageResources.put(outer_dlb, -1);
+        currentImageResources.put(outer_drb, -1);
+        currentImageResources.put(outer_ufo, -1);
+        currentImageResources.put(outer_ulb, -1);
+        currentImageResources.put(outer_urb, -1);
     }
 
     private void showResultActivity() {
@@ -176,6 +210,14 @@ public class DisplayActivity extends AppCompatActivity {
     }
 
     private void countAndProcess(final int class_type) {
+        Message message = new Message();
+        Bundle bundle = new Bundle();
+        if (class_type >= 3 && !finishedFlags[class_type]) {
+            bundle.putInt("cur", class_type);
+            message.what = Constants.TOOTH_BLINK;
+            message.setData(bundle);
+            blinkHandler.sendMessage(message);
+        }
         // 暂时取消实时牙面显示
         //        runOnUiThread(new Runnable() {
 //            @Override
@@ -202,24 +244,19 @@ public class DisplayActivity extends AppCompatActivity {
         if (timeAtPosition[class_type] >= maxTimeEachPosition) {
             // 如果达到指定的刷牙时间
             if (class_type >= 3 && !finishedFlags[class_type]) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        switchPictures(class_type);
-                        vibrator = (Vibrator) getSystemService(Service.VIBRATOR_SERVICE);
-                        vibrator.vibrate(500);
-                    }
-                });
+                message = new Message();
+                bundle = new Bundle();
+                message.what = Constants.TOOTH_DONE;
+                bundle.putInt("cur", class_type);
+                message.setData(bundle);
+                blinkHandler.sendMessage(message);
             }
             finishedFlags[class_type] = true;
         }
         for (int i = 0; i < counterAtPosition.length; ++i) {
-            System.out.print(counterAtPosition[i] + " ");
-        }
-        System.out.println();
-        for (int i = 0; i < counterAtPosition.length; ++i) {
             System.out.print(timeAtPosition[i] + " ");
         }
+        System.out.println();
     }
 
     private void recordAndRecognize() throws Exception {
@@ -287,132 +324,313 @@ public class DisplayActivity extends AppCompatActivity {
         mRecorder.release();
     }
 
+    /*设置图片 如果resID是-1恢复原图片 否则设置对应的图片
+     * */
+    private void setImage(ImageView image, int resID, int class_type) {
+        if (resID != -1) {
+            image.setImageResource(resID);
+            currentImageResources.put(image, resID);
+        } else {
+            int id = currentImageResources.get(image);
+            if (id == -1) {
+                image.setImageDrawable(null);
+            } else {
+                image.setImageResource(id);
+            }
+        }
+    }
+
     private void switchPictures(int flag) {
         //text.setText(""+flag);
         switch (flag) {
             case 2:
-                if (flagList[2]) {
-                    //第二次漱口
-                    flagList[2] = false;
-                } else {
-                    inner_dfi.setImageDrawable(null);
-                    inner_dlbi.setImageDrawable(null);
-                    inner_drbi.setImageDrawable(null);
-                    inner_ufi.setImageDrawable(null);
-                    inner_ulbi.setImageDrawable(null);
-                    inner_urbi.setImageDrawable(null);
-                    outer_dfo.setImageDrawable(null);
-                    outer_dlb.setImageDrawable(null);
-                    outer_drb.setImageDrawable(null);
-                    outer_ufo.setImageDrawable(null);
-                    outer_ulb.setImageDrawable(null);
-                    outer_urb.setImageDrawable(null);
-
-                    flagList[2] = true;
-                    for (int i = 3; i < 19; i++) {
-                        flagList[i] = false;
-                    }
-                }
+                // 漱口就清空牙面 但是不清空flag
+                inner_dfi.setImageDrawable(null);
+                inner_dlbi.setImageDrawable(null);
+                inner_drbi.setImageDrawable(null);
+                inner_ufi.setImageDrawable(null);
+                inner_ulbi.setImageDrawable(null);
+                inner_urbi.setImageDrawable(null);
+                outer_dfo.setImageDrawable(null);
+                outer_dlb.setImageDrawable(null);
+                outer_drb.setImageDrawable(null);
+                outer_ufo.setImageDrawable(null);
+                outer_ulb.setImageDrawable(null);
+                outer_urb.setImageDrawable(null);
                 break;
             case 3:
-                if (flagList[6]) {
-                    outer_ulb.setImageResource((R.mipmap.outer_ulb));
+                if (finishedFlags[6]) {
+                    setImage(outer_ulb, R.mipmap.outer_ulb, flag);
                 } else {
-                    outer_ulb.setImageResource(R.mipmap.outer_ulbo);
+                    setImage(outer_ulb, R.mipmap.outer_ulbo, flag);
                 }
-                flagList[3] = true;
+                finishedFlags[3] = true;
                 break;
             case 4:
-                outer_ufo.setImageResource(R.mipmap.outer_ufo);
-                flagList[4] = true;
+                setImage(outer_ufo, R.mipmap.outer_ufo, flag);
+                finishedFlags[4] = true;
                 break;
             case 5:
-                if (flagList[7]) {
-                    outer_urb.setImageResource(R.mipmap.outer_urb);
+                if (finishedFlags[7]) {
+                    setImage(outer_urb, R.mipmap.outer_urb, flag);
                 } else {
-                    outer_urb.setImageResource(R.mipmap.outer_urbo);
+                    setImage(outer_urb, R.mipmap.outer_urbo, flag);
                 }
-                flagList[5] = true;
+                finishedFlags[5] = true;
                 break;
             case 6:
-                if (flagList[3]) {
-                    outer_ulb.setImageResource(R.mipmap.outer_ulb);
+                if (finishedFlags[3]) {
+                    setImage(outer_ulb, R.mipmap.outer_ulb, flag);
                 } else {
-                    outer_ulb.setImageResource(R.mipmap.outer_ulbm);
+                    setImage(outer_ulb, R.mipmap.outer_ulbm, flag);
                 }
-                flagList[6] = true;
+                finishedFlags[6] = true;
                 break;
             case 7:
-                if (flagList[5]) {
-                    outer_urb.setImageResource(R.mipmap.outer_urb);
+                if (finishedFlags[5]) {
+                    setImage(outer_urb, R.mipmap.outer_urb, flag);
                 } else {
-                    outer_urb.setImageResource(R.mipmap.outer_urbm);
+                    setImage(outer_urb, R.mipmap.outer_urbm, flag);
                 }
-                flagList[7] = true;
+                finishedFlags[7] = true;
                 break;
             case 8:
-                inner_ulbi.setImageResource(R.mipmap.inner_ulbi);
-                flagList[8] = true;
+                setImage(inner_ulbi, R.mipmap.inner_ulbi, flag);
+                finishedFlags[8] = true;
                 break;
             case 9:
-                inner_ufi.setImageResource(R.mipmap.inner_ufi);
-                flagList[9] = true;
+                setImage(inner_ufi, R.mipmap.inner_ufi, flag);
+                finishedFlags[9] = true;
                 break;
             case 10:
-                inner_urbi.setImageResource(R.mipmap.inner_urbi);
-                flagList[10] = true;
+                setImage(inner_urbi, R.mipmap.inner_urbi, flag);
+                finishedFlags[10] = true;
                 break;
             case 11:
-                if (flagList[14]) {
-                    outer_dlb.setImageResource(R.mipmap.outer_dlb);
+                if (finishedFlags[14]) {
+                    setImage(outer_dlb, R.mipmap.outer_dlb, flag);
                 } else {
-                    outer_dlb.setImageResource(R.mipmap.outer_dlbo);
+                    setImage(outer_dlb, R.mipmap.outer_dlbo, flag);
                 }
-                flagList[11] = true;
+                finishedFlags[11] = true;
                 break;
             case 12:
-                outer_dfo.setImageResource(R.mipmap.outer_dfo);
-                flagList[12] = true;
+                setImage(outer_dfo, R.mipmap.outer_dfo, flag);
+                finishedFlags[12] = true;
                 break;
             case 13:
-                if (flagList[15]) {
-                    outer_drb.setImageResource(R.mipmap.outer_drb);
+                if (finishedFlags[15]) {
+                    setImage(outer_drb, R.mipmap.outer_drb, flag);
                 } else {
-                    outer_drb.setImageResource(R.mipmap.outer_drbo);
+                    setImage(outer_drb, R.mipmap.outer_drbo, flag);
                 }
-                flagList[13] = true;
+                finishedFlags[13] = true;
                 break;
             case 14:
-                if (flagList[11]) {
-                    outer_dlb.setImageResource(R.mipmap.outer_dlb);
+                if (finishedFlags[11]) {
+                    setImage(outer_dlb, R.mipmap.outer_dlb, flag);
                 } else {
-                    outer_dlb.setImageResource(R.mipmap.outer_dlbm);
+                    setImage(outer_dlb, R.mipmap.outer_dlbm, flag);
                 }
-                flagList[14] = true;
+                finishedFlags[14] = true;
                 break;
             case 15:
-                if (flagList[13]) {
-                    outer_drb.setImageResource(R.mipmap.outer_drb);
+                if (finishedFlags[13]) {
+                    setImage(outer_drb, R.mipmap.outer_drb, flag);
                 } else {
-                    outer_drb.setImageResource(R.mipmap.outer_drbm);
+                    setImage(outer_drb, R.mipmap.outer_drbm, flag);
                 }
-                flagList[15] = true;
+                finishedFlags[15] = true;
                 break;
             case 16:
-                inner_dlbi.setImageResource(R.mipmap.inner_dlbi);
-                flagList[16] = true;
+                setImage(inner_dlbi, R.mipmap.inner_dlbi, flag);
+                finishedFlags[16] = true;
                 break;
             case 17:
-                inner_dfi.setImageResource(R.mipmap.inner_dfi);
-                flagList[17] = true;
+                setImage(inner_dfi, R.mipmap.inner_dfi, flag);
+                finishedFlags[17] = true;
                 break;
             case 18:
-                inner_drbi.setImageResource(R.mipmap.inner_drbi);
-                flagList[18] = true;
+                setImage(inner_drbi, R.mipmap.inner_drbi, flag);
+                finishedFlags[18] = true;
                 break;
             default:
         }
 
+    }
+
+    private void switchGreenPictures(int flag) {
+        switch (flag) {
+            case 3:
+                if (finishedFlags[6]) {
+                    outer_ulb.setImageResource(R.mipmap.outer_ulbo_g_1);
+                } else {
+                    outer_ulb.setImageResource(R.mipmap.outer_ulbo_g_2);
+                }
+                break;
+            case 4:
+                outer_ufo.setImageResource(R.mipmap.outer_ufo_g);
+                break;
+            case 5:
+                if (finishedFlags[7]) {
+                    outer_urb.setImageResource(R.mipmap.outer_urbo_g_1);
+                } else {
+                    outer_urb.setImageResource(R.mipmap.outer_urbo_g_2);
+                }
+                break;
+            case 6:
+                if (finishedFlags[3]) {
+                    outer_ulb.setImageResource(R.mipmap.outer_ulbm_g_1);
+                } else {
+                    outer_ulb.setImageResource(R.mipmap.outer_ulbm_g_2);
+                }
+                break;
+            case 7:
+                if (finishedFlags[5]) {
+                    outer_urb.setImageResource(R.mipmap.outer_urbm_g_1);
+                } else {
+                    outer_urb.setImageResource(R.mipmap.outer_urbm_g_2);
+                }
+                break;
+            case 8:
+                inner_ulbi.setImageResource(R.mipmap.inner_ulbi_g);
+                break;
+            case 9:
+                inner_ufi.setImageResource(R.mipmap.inner_ufi_g);
+                break;
+            case 10:
+                inner_urbi.setImageResource(R.mipmap.inner_urbi_g);
+                break;
+            case 11:
+                if (finishedFlags[14]) {
+                    outer_dlb.setImageResource(R.mipmap.outer_dlbo_g_1);
+                } else {
+                    outer_dlb.setImageResource(R.mipmap.outer_dlbo_g_2);
+                }
+                break;
+            case 12:
+                outer_dfo.setImageResource(R.mipmap.outer_dfo_g);
+                break;
+            case 13:
+                if (finishedFlags[15]) {
+                    outer_drb.setImageResource(R.mipmap.outer_drbo_g_1);
+                } else {
+                    outer_drb.setImageResource(R.mipmap.outer_drbo_g_2);
+                }
+                break;
+            case 14:
+                if (finishedFlags[11]) {
+                    outer_dlb.setImageResource(R.mipmap.outer_dlbm_g_1);
+                } else {
+                    outer_dlb.setImageResource(R.mipmap.outer_dlbm_g_2);
+                }
+                break;
+            case 15:
+                if (finishedFlags[13]) {
+                    outer_drb.setImageResource(R.mipmap.outer_drbm_g_1);
+                } else {
+                    outer_drb.setImageResource(R.mipmap.outer_drbm_g_2);
+                }
+                break;
+            case 16:
+                inner_dlbi.setImageResource(R.mipmap.inner_dlbi_g);
+                break;
+            case 17:
+                inner_dfi.setImageResource(R.mipmap.inner_dfi_g);
+                break;
+            case 18:
+                inner_drbi.setImageResource(R.mipmap.inner_drbi_g);
+                break;
+            default:
+        }
+
+    }
+
+    private void recoverPicture(int flag) {
+        int resID = -1;
+        switch (flag) {
+            case 3:
+                if (finishedFlags[6]) {
+                    setImage(outer_ulb, resID, flag);
+                } else {
+                    setImage(outer_ulb, resID, flag);
+                }
+                break;
+            case 4:
+                setImage(outer_ufo, resID, flag);
+                break;
+            case 5:
+                if (finishedFlags[7]) {
+                    setImage(outer_urb, resID, flag);
+                } else {
+                    setImage(outer_urb, resID, flag);
+                }
+                break;
+            case 6:
+                if (finishedFlags[3]) {
+                    setImage(outer_ulb, resID, flag);
+                } else {
+                    setImage(outer_ulb, resID, flag);
+                }
+                break;
+            case 7:
+                if (finishedFlags[5]) {
+                    setImage(outer_urb, resID, flag);
+                } else {
+                    setImage(outer_urb, resID, flag);
+                }
+                break;
+            case 8:
+                setImage(inner_ulbi, resID, flag);
+                break;
+            case 9:
+                setImage(inner_ufi, resID, flag);
+                break;
+            case 10:
+                setImage(inner_urbi, resID, flag);
+                break;
+            case 11:
+                if (finishedFlags[14]) {
+                    setImage(outer_dlb, resID, flag);
+                } else {
+                    setImage(outer_dlb, resID, flag);
+                }
+                break;
+            case 12:
+                setImage(outer_dfo, resID, flag);
+                break;
+            case 13:
+                if (finishedFlags[15]) {
+                    setImage(outer_drb, resID, flag);
+                } else {
+                    setImage(outer_drb, resID, flag);
+                }
+                break;
+            case 14:
+                if (finishedFlags[11]) {
+                    setImage(outer_dlb, resID, flag);
+                } else {
+                    setImage(outer_dlb, resID, flag);
+                }
+                break;
+            case 15:
+                if (finishedFlags[13]) {
+                    setImage(outer_drb, resID, flag);
+                } else {
+                    setImage(outer_drb, resID, flag);
+                }
+                break;
+            case 16:
+                setImage(inner_dlbi, resID, flag);
+                break;
+            case 17:
+                setImage(inner_dfi, resID, flag);
+                break;
+            case 18:
+                setImage(inner_drbi, resID, flag);
+                break;
+            default:
+        }
     }
 
     @Override
@@ -494,4 +712,56 @@ public class DisplayActivity extends AppCompatActivity {
         loadModelThread.start();
     }
 
+    class BlinkThread implements Runnable {
+
+        @Override
+        public void run() {
+            Looper.prepare();
+            blinkHandler = new Handler() {
+                @Override
+                public void handleMessage(Message msg) {
+                    super.handleMessage(msg);
+                    final int class_type = msg.getData().getInt("cur");
+                    try {
+                        switch (msg.what) {
+                            case Constants.TOOTH_BLINK:
+                                //获得刚才发送的Message对象，然后在这里进行UI操作
+                                System.out.println("====> 闪烁牙面：" + msg.getData().getInt("cur"));
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        switchGreenPictures(class_type);
+                                    }
+                                });
+                                Thread.sleep(300);
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        recoverPicture(class_type);
+                                    }
+                                });
+                                Thread.sleep(200);
+                                break;
+                            case Constants.TOOTH_DONE:
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        switchPictures(class_type);
+                                        vibrator = (Vibrator) getSystemService(Service.VIBRATOR_SERVICE);
+                                        vibrator.vibrate(500);
+                                    }
+                                });
+                                System.out.println("====> 刷完了");
+                                break;
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            };
+            Looper.loop();
+
+        }
+    }
 }

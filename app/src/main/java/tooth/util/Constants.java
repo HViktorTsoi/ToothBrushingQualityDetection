@@ -27,5 +27,8 @@ public class Constants {
     public static String CREATIONTIME = "creationTime";
     public static String DURATION = "duration";
 
+    public final static int TOOTH_BLINK = 55;
+    public final static int TOOTH_DONE = 66;
+
     public static boolean flag2 = false;
 }
