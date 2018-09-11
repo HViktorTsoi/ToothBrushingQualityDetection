@@ -1,587 +1,90 @@
 package tooth.activity;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences;
+import android.app.ProgressDialog;
 import android.media.AudioFormat;
-import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.os.Environment;
+import android.os.Process;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.SeekBar;
+import android.widget.Switch;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
-import tooth.util.Constants;
+import be.tarsos.dsp.io.android.AndroidFFMPEGLocator;
 import cjh.recorder.R;
+import tooth.util.ParseUtil;
+import tooth.util.PositionButtonWrapper;
+import tooth.util.noise.SpectralSubtraction;
 import weka.Constant;
 import weka.MakeArffFile;
 
 /**
  * Created by admin on 2017/10/12.
+ * Edited by Cui Jiahe 2018/07/16
  */
 
-public class CollectionActivity extends AppCompatActivity implements View.OnClickListener{
-
-    public static CollectionActivity instance;
-
-    private Button button1,button2,button3,button4,button5,button6,button7,button8,button9,button10,button11,button12,button13,button14,button15,button16;
-    private Button button17,button18;
-    private Button button_test;
-    private MenuItem item1,item2,item3,item4;
-
+public class CollectionActivity extends AppCompatActivity implements View.OnClickListener {
+    // 保存原始音频的流
+    DataOutputStream rawDataStream;
+    // 录音线程;
+    RecordThread recordThread;
+    Thread recordThreadExecutor;
+    // 当前按下的button
+    PositionButtonWrapper currentButtonWrapper;
+    PositionButtonWrapper controlButtonWrapper;
+    // 当前数据集的名称
+    String currentDataSetName = "";
+    // 当前组的record是否已经开始
+    boolean isRecordStarted = false;
+    // UI配置
+    // 所有的位置button信息的map
+    int[] buttonIDs = {
+            R.id.button1, R.id.button2, R.id.button3, R.id.button4,
+            R.id.button5, R.id.button6, R.id.button7, R.id.button8,
+            R.id.button9, R.id.button10, R.id.button11, R.id.button12,
+            R.id.button13, R.id.button14, R.id.button15, R.id.button16,
+            R.id.button17, R.id.button18
+    };
+    private Button buttonControl;
+    private HashMap<Integer, PositionButtonWrapper> positionClassButtonMap = new HashMap<>();
+    private SeekBar sbAdjWindowSize, sbAdjOverlapPercentage;
+    private EditText txtAdjNoiseRecordTime;
+    private TextView txtWindowLength, txtCurOverlapPercentage;
+    private Switch switchSaveRawAudio;
+    private String TAG = "ToothRecord";
+    private ProgressDialog waitingDialog;
+    // 正在记录的位置类型
     private int recordFlag = 0;
-
-    File extDir = Environment.getExternalStorageDirectory();
-    public static final String AUDIORECORDER = "audiorecorder";
-    private String filePath;
-
-    private String TAG = "BluetoothRecord";
-    private static String mFileName = null;
-    private AudioRecord mRecorder = null;
-    private AudioManager mAudioManager = null;
-
-    public boolean recordering = false;
-
-    private ArrayList<Byte> data = new ArrayList<>();
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.collect_layout);
-        /*
-         ** By Y4
-         */
-        File file = new File(Constant.FILE_PATH);
-        File fileParent = file.getParentFile();
-        if(!fileParent.exists()){
-            fileParent.mkdirs();
-        }
-        file = new File(Constant.MODEL_PATH);
-        fileParent = file.getParentFile();
-        if(!fileParent.exists()){
-            fileParent.mkdirs();
-        }
-        MakeArffFile.initArffFile();
-
-        mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-
-        initialize();
-    }
-
-    private void initialize() {
-
-        button1 = (Button)findViewById(R.id.button1);
-        button1.setOnClickListener(this);
-        button2 = (Button)findViewById(R.id.button2);
-        button2.setOnClickListener(this);
-        button3 = (Button)findViewById(R.id.button3);
-        button3.setOnClickListener(this);
-        button4 = (Button)findViewById(R.id.button4);
-        button4.setOnClickListener(this);
-        button5 = (Button)findViewById(R.id.button5);
-        button5.setOnClickListener(this);
-        button6 = (Button)findViewById(R.id.button6);
-        button6.setOnClickListener(this);
-        button7 = (Button)findViewById(R.id.button7);
-        button7.setOnClickListener(this);
-        button8 = (Button)findViewById(R.id.button8);
-        button8.setOnClickListener(this);
-        button9 = (Button)findViewById(R.id.button9);
-        button9.setOnClickListener(this);
-        button10 = (Button)findViewById(R.id.button10);
-        button10.setOnClickListener(this);
-        button11 = (Button)findViewById(R.id.button11);
-        button11.setOnClickListener(this);
-        button12 = (Button)findViewById(R.id.button12);
-        button12.setOnClickListener(this);
-        button13 = (Button)findViewById(R.id.button13);
-        button13.setOnClickListener(this);
-        button14 = (Button)findViewById(R.id.button14);
-        button14.setOnClickListener(this);
-        button15 = (Button)findViewById(R.id.button15);
-        button15.setOnClickListener(this);
-        button16 = (Button)findViewById(R.id.button16);
-        button16.setOnClickListener(this);
-        button17 = (Button)findViewById(R.id.button17);
-        button17.setOnClickListener(this);
-        button18 = (Button)findViewById(R.id.button18);
-        button18.setOnClickListener(this);
-        button_test = (Button)findViewById(R.id.button_test);
-        button_test.setOnClickListener(this);
-
-    }
-
-
-    private static String  recordTyp = "";
-    private static boolean mic_status = false;
-
-    @Override
-    public void onClick(View v) {
-
-        switch (v.getId()){
-            case R.id.button1:
-                if (!mic_status) {
-                    mic_status = true;
-                    recordering = true;
-                    button1.setText("停止");
-                    button1.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    startRecording();
-                } else {
-                    mic_status = false;
-                    recordering = false;
-                    button1.setText("开始");
-                    button1.setBackgroundColor(getResources().getColor(R.color.gray));
-                    stopRecording();
-                }
-                /*if(recordFlag == 0){
-                    recordFlag = 1;
-                    recordering = true;
-                    button1.setText("停止");
-                    //Todo:startRecording
-                    //filePath = new File(extDir, AUDIORECORDER + "_" + System.currentTimeMillis() + "").getAbsolutePath() + ".pcm";
-                    //AudioRecorderUtil.startRecordering(filePath);
-                    this.recordTyp = "18"; //"NULL";
-                    startRecording();
-                }
-                else if(recordFlag == 1){
-                    recordFlag = 0;
-                    recordering = false;
-                    button1.setText("无");
-                    //Todo:stopRecording
-                    //AudioRecorderUtil.stopRecording();
-                    stopRecording();
-                }*/
-                break;
-            case R.id.button2:
-                if(recordFlag == 0){
-                    recordFlag = 2;
-                    //recordering = true;
-                    button2.setText("停止");
-                    button2.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "1"; // = "Gargling";
-                    //startRecording();
-                }
-                else if(recordFlag == 2){
-                    recordFlag = 0;
-                    //recordering = false;
-                    this.recordTyp = "18";
-                    button2.setText("漱口");
-                    button2.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button3:
-                if(recordFlag == 0){
-                    recordFlag = 3;
-                    //recordering = true;
-                    button3.setText("停止");
-                    button3.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "2"; // = "ULBO";
-                    //startRecording();
-                }
-                else if(recordFlag == 3){
-                    recordFlag = 0;
-                    //recordering = false;
-                    this.recordTyp = "18";
-                    button3.setText("上左后外");
-                    button3.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button4:
-                if(recordFlag == 0){
-                    recordFlag = 4;
-                    //recordering = true;
-                    button4.setText("停止");
-                    button4.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "3"; // = "UFO";
-                    //startRecording();
-                }
-                else if(recordFlag == 4){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button4.setText("上前外");
-                    button4.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button5:
-                if(recordFlag == 0){
-                    recordFlag = 5;
-                    //recordering = true;
-                    button5.setText("停止");
-                    button5.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "4"; // = "URBO";
-                    //startRecording();
-                }
-                else if(recordFlag == 5){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button5.setText("上右后外");
-                    button5.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button6:
-                if(recordFlag == 0){
-                    recordFlag = 6;
-                    //recordering = true;
-                    button6.setText("停止");
-                    button6.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "5"; // = "ULBM";
-                    //startRecording();
-                }
-                else if(recordFlag == 6){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button6.setText("上左后中");
-                    button6.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button7:
-                if(recordFlag == 0){
-                    recordFlag = 7;
-                    //recordering = true;
-                    button7.setText("停止");
-                    button7.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "6"; // = "URBM";
-                    //startRecording();
-                }
-                else if(recordFlag == 7){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button7.setText("上右后中");
-                    button7.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button8:
-                if(recordFlag == 0){
-                    recordFlag = 8;
-                    //recordering = true;
-                    button8.setText("停止");
-                    button8.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "7"; // = "ULBI";
-                    //startRecording();
-                }
-                else if(recordFlag == 8){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button8.setText("上左后内");
-                    button8.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button9:
-                if(recordFlag == 0){
-                    recordFlag = 9;
-                    //recordering = true;
-                    button9.setText("停止");
-                    button9.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "8"; // = "UFI";
-                    //startRecording();
-                }
-                else if(recordFlag == 9){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button9.setText("上前内");
-                    button9.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button10:
-                if(recordFlag == 0){
-                    recordFlag = 10;
-                    //recordering = true;
-                    button10.setText("停止");
-                    button10.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "9"; // = "URBI";
-                    //startRecording();
-                }
-                else if(recordFlag == 10){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button10.setText("上右后内");
-                    button10.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button11:
-                if(recordFlag == 0){
-                    recordFlag = 11;
-                    //recordering = true;
-                    button11.setText("停止");
-                    button11.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "10"; // = "DLBO";
-                    //startRecording();
-                }
-                else if(recordFlag == 11){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button11.setText("下左后外");
-                    button11.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button12:
-                if(recordFlag == 0){
-                    recordFlag = 12;
-                    //recordering = true;
-                    button12.setText("停止");
-                    button12.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "11"; // = "DFO";
-                    //startRecording();
-                }
-                else if(recordFlag == 12){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button12.setText("下前外");
-                    button12.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button13:
-                if(recordFlag == 0){
-                    recordFlag = 13;
-                    //recordering = true;
-                    button13.setText("停止");
-                    button13.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "12"; // = "DRBO";
-                    //startRecording();
-                }
-                else if(recordFlag == 13){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button13.setText("下右后外");
-                    button13.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button14:
-                if(recordFlag == 0){
-                    recordFlag = 14;
-                    //recordering = true;
-                    button14.setText("停止");
-                    button14.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "13"; // = "DLBM";
-                    //startRecording();
-                }
-                else if(recordFlag == 14){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button14.setText("下左后中");
-                    button14.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button15:
-                if(recordFlag == 0){
-                    recordFlag = 15;
-                    //recordering = true;
-                    button15.setText("停止");
-                    button15.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "14"; // = "DRBM";
-                    //startRecording();
-                }
-                else if(recordFlag == 15){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button15.setText("下右后中");
-                    button15.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button16:
-                if(recordFlag == 0){
-                    recordFlag = 16;
-                    //recordering = true;
-                    button16.setText("停止");
-                    button16.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "15"; // = "DLBI";
-                    //startRecording();
-                }
-                else if(recordFlag == 16){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button16.setText("下左后内");
-                    button16.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button17:
-                if(recordFlag == 0){
-                    recordFlag = 17;
-                    //recordering = true;
-                    button17.setText("停止");
-                    button17.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "16"; // = "DFI";
-                    //startRecording();
-                }
-                else if(recordFlag == 17){
-                    recordFlag = 0;
-                    this.recordTyp = "18";
-                    //recordering = false;
-                    button17.setText("下前内");
-                    button17.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button18:
-                if(recordFlag == 0){
-                    recordFlag = 18;
-                    //recordering = true;
-                    button18.setText("停止");
-                    button18.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    //Todo:startRecording
-                    this.recordTyp = "17"; // = "DRBI";
-                    //startRecording();
-                }
-                else if(recordFlag == 18){
-                    recordFlag = 0;
-                    //recordering = false;
-                    this.recordTyp = "18";
-                    button18.setText("下右后内");
-                    button18.setBackgroundColor(getResources().getColor(R.color.gray));
-                    //Todo:stopRecording
-                    //stopRecording();
-                }
-                break;
-            case R.id.button_test:
-                if(recordFlag == 0){
-                    Intent intent = new Intent(CollectionActivity.this,DisplayActivity.class);
-                    startActivity(intent);
-                }
-                break;
-            default:
-                recordFlag = 0;
-        }
-
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        /*MenuInflater in = getMenuInflater();
-        in.inflate(R.menu.menu_layout, menu);*/
-        super.onCreateOptionsMenu(menu);
-        int group = 1;
-        item1 = menu.add(group, 1, 1, "0.1");
-        item2 = menu.add(group, 2, 2, "0.2");
-        item3 = menu.add(group, 3, 3, "0.5");
-        item4 = menu.add(group, 4, 4, "0.8");
-
-        SharedPreferences userSettings= getSharedPreferences("setting",0);
-        int option = userSettings.getInt("option",1);
-        menu.setGroupCheckable(group,true,true);
-        switch (option){
-            case 1:
-                item1.setChecked(true);
-                break;
-            case 2:
-                item2.setChecked(true);
-                break;
-            case 3:
-                item3.setChecked(true);
-                break;
-            case 4:
-                item4.setChecked(true);
-        }
-
-        return true;
-
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case 1:
-                setOption(1);
-                item1.setChecked(true);
-                break;
-            case 2:
-                setOption(2);
-                item2.setChecked(true);
-                break;
-            case 3:
-                setOption(3);
-                item3.setChecked(true);
-                break;
-            case 4:
-                setOption(4);
-                item4.setChecked(true);
-                break;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-        return true;
-    }
-
-    private void setOption(int i){
-        SharedPreferences userSettings = getSharedPreferences("setting", 0);
-        SharedPreferences.Editor editor = userSettings.edit();
-        editor.putInt("option",i);
-        editor.commit();
-    }
-
+    public boolean isRecording = false;
+    private boolean isSaveRawAudioData = false;
+    // 数据采集配置
     // 音频获取源
     private static int audioSource = MediaRecorder.AudioSource.MIC;
-    // 设置音频采样率，44100是目前的标准
+    // 设置音频采样率
     private static int sampleRateInHz = 44100;
     // 设置音频的录制的声道CHANNEL_IN_STEREO为双声道，CHANNEL_CONFIGURATION_MONO为单声道
     private static int channelConfig = AudioFormat.CHANNEL_IN_STEREO;
@@ -590,207 +93,461 @@ public class CollectionActivity extends AppCompatActivity implements View.OnClic
     // 缓冲区字节大小
     private static int bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz,
             channelConfig, audioFormat);
+    // 最大可调整窗口长度
+    final static double maxWindowLengthInSecond = 0.8;
+    //    private int windowLength = (int) ((double) sampleRateInHz * maxWindowLengthInSecond) / 2;//0.8/2s;
+    private int windowLength = (int) (maxWindowLengthInSecond / 2 * sampleRateInHz);//0.8s/2;
+    // 步长
+    private int overlapPercentage = 50;
+    // 噪声消除器
+    SpectralSubtraction spectralSubstraction;
+    // 噪声信号采集时长
+    private int noiseLengthInSecond = 5;
 
-    private int windowLength = sampleRateInHz / 2;//3000;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.collect_layout);
+        /*
+         ** By Y4
+         *  初始化文件存储路径
+         */
+//        File file = new File(Constant.FILE_PATH);
+//        File fileParent = file.getParentFile();
+//        if (!fileParent.exists()) {
+//            fileParent.mkdirs();
+//        }
+//        file = new File(Constant.MODEL_PATH);
+//        fileParent = file.getParentFile();
+//        if (!fileParent.exists()) {
+//            fileParent.mkdirs();
+//        }
+//        MakeArffFile.initArffFile();
 
-    public void startRecording(){
+        initialize();
 
-        mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
-        mFileName += "/record.3gp";
-        mRecorder = new AudioRecord(audioSource, sampleRateInHz,
-                channelConfig, audioFormat, bufferSizeInBytes);
+//        new AndroidFFMPEGLocator(this);
 
-        /*if(Constants.flag2){
-        }*/
-        //AudioDeviceInfo audioDeviceInfo = new AudioDeviceInfo();
-        //mRecorder.setPreferredDevice(AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
-        /*mRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setOutputFile(mFileName);
-        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);*/
-        /*try {
-            mRecorder.prepare();
-        } catch (Exception e) {
-            // TODO: handle exception
-            Log.i(TAG, "prepare() failed!");
-        }*/
-        if (!mAudioManager.isBluetoothScoAvailableOffCall()) {
-            Log.i(TAG, "系统不支持蓝牙录音");
-            System.out.println("系统不支持蓝牙录音");
-            return;
+        isRecording = false;
+        isRecordStarted = false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Toast.makeText(this, "正在处理未停止的录音进程", Toast.LENGTH_SHORT).show();
+        System.out.println("停止录音");
+        this.isRecording = false;
+        this.isRecordStarted = false;
+        if (this.recordThreadExecutor != null) {
+            try {
+                this.recordThreadExecutor.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
-        Log.i(TAG, "系统支持蓝牙录音");
-        System.out.println("系统支持蓝牙录音");
-        mAudioManager.stopBluetoothSco();
-        mAudioManager.startBluetoothSco();//蓝牙录音的关键，启动SCO连接，耳机话筒才起作用
+    }
 
-        registerReceiver(new BroadcastReceiver() {
+    /*
+     *
+     * 初始化视图绑定
+     * */
+    private void initialize() {
+//         注册口腔位置的一系列button 并用map存储
+        for (int buttonID : buttonIDs) {
+            // 将button通过wrapper放入map中
+            positionClassButtonMap.put(buttonID,
+                    new PositionButtonWrapper((Button) findViewById(buttonID), positionClassButtonMap.size() + 1, 0));
+            positionClassButtonMap.get(buttonID).getButton().setOnClickListener(this);
+            // 初始化牙面button不可用
+            positionClassButtonMap.get(buttonID).getButton().setEnabled(false);
+            positionClassButtonMap.get(buttonID).getButton().setBackgroundColor(getResources().getColor(R.color.gray));
+            positionClassButtonMap.get(buttonID).getButton().setTextColor(getResources().getColor(R.color.dark_gray));
+        }
+        buttonControl = (Button) findViewById(R.id.button_ctrl);
+        Objects.requireNonNull(buttonControl).setOnClickListener(this);
+//        button_test = (Button) findViewById(R.id.button_test);
+//        assert button_test != null;
+//        button_test.setOnClickListener(this);
+//        初始化seekbar 调整窗口大小
+        txtWindowLength = (TextView) findViewById(R.id.txtCurWindowSize);
+        sbAdjWindowSize = (SeekBar) findViewById(R.id.AdjWindowSize);
+        assert sbAdjWindowSize != null;
+        // 初始化窗口大小
+        int initProgress = (int) ((double) windowLength / (double) sampleRateInHz / maxWindowLengthInSecond * 100);
+        initProgress = discretization(initProgress, 12);
+        sbAdjWindowSize.setProgress(initProgress);
+        txtWindowLength.setText(String.format("%.1fs", progressToWindowSizeInSecond(initProgress)));
+        sbAdjWindowSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
             @Override
-            public void onReceive(Context context, Intent intent) {
-                int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
+                // 变为5档 即除以20之后取整
+                progress = discretization(progress, 12);
+                txtWindowLength.setText(String.format("%.1fs", progressToWindowSizeInSecond(progress)));
+                // 计算并设置窗口大小
+                windowLength = (int) (sampleRateInHz * progressToWindowSizeInSecond(progress));
+//                保证windowLength的值为偶数
+                windowLength = windowLength % 2 == 0 ? windowLength : windowLength + 1;
+                System.out.println(windowLength);
+            }
 
-                if (AudioManager.SCO_AUDIO_STATE_CONNECTED == state) {
-                    Log.i(TAG, "AudioManager.SCO_AUDIO_STATE_CONNECTED");
-                    System.out.println("AudioManager.SCO_AUDIO_STATE_CONNECTED");
-                    mAudioManager.setBluetoothScoOn(true);  //打开SCO
-                    Log.i(TAG, "Routing:" + mAudioManager.isBluetoothScoOn());
-                    System.out.println("Routing:" + mAudioManager.isBluetoothScoOn());
-                    mAudioManager.setMode(AudioManager.STREAM_MUSIC);
-                    //mRecorder.start();//开始录音
-                    mRecorder.startRecording();
-                    //Constants.audioDeviceInfo_Blu = mRecorder.getRoutedDevice();
-                    //System.out.println("audioDeviceInfo Blu" + Constants.audioDeviceInfo_Blu.getType());
-                    new Thread(new BlueRecordThread()).start();
-                    unregisterReceiver(this);  //别遗漏
-                }else {//等待一秒后再尝试启动SCO
-                    try {
-                        Thread.sleep(10000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+        sbAdjOverlapPercentage = (SeekBar) findViewById(R.id.AdjOverlapPecentage);
+        sbAdjOverlapPercentage.setProgress(overlapPercentage);
+        txtCurOverlapPercentage = (TextView) findViewById(R.id.txtCurOverlapPecentage);
+        txtCurOverlapPercentage.setText(String.format("%d%%", overlapPercentage));
+        sbAdjOverlapPercentage.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
+                overlapPercentage = discretization(progress, 10);
+                overlapPercentage = overlapPercentage > 90 ? 90 : overlapPercentage;
+                txtCurOverlapPercentage.setText(String.format("%d%%", overlapPercentage));
+                System.out.println(overlapPercentage);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+        txtAdjNoiseRecordTime = (EditText) findViewById(R.id.AdjNoiseRecordTime);
+        assert txtAdjNoiseRecordTime != null;
+        txtAdjNoiseRecordTime.setText(String.valueOf(noiseLengthInSecond));
+        txtAdjNoiseRecordTime.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (!s.toString().equals("")) {
+                    noiseLengthInSecond = Integer.valueOf(s.toString());
+                }
+                System.out.println(noiseLengthInSecond);
+            }
+        });
+        sbAdjWindowSize.setFocusable(true);
+        sbAdjWindowSize.requestFocus();
+        // 配置保存原始音频按钮
+        switchSaveRawAudio = (Switch) findViewById(R.id.switchSaveRaw);
+        switchSaveRawAudio.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                isSaveRawAudioData = isChecked;
+            }
+        });
+    }
+
+    /*
+     * 将整数的progress值转换成以秒为单位的窗口长度
+     * */
+    private double progressToWindowSizeInSecond(double progress) {
+        return (progress + 1) / 100 * maxWindowLengthInSecond;
+    }
+
+    /*
+     * 将连续数值分离散档
+     * */
+    private int discretization(int num, int param) {
+        return (int) (num / param) * param;
+    }
+
+    @Override
+    public void onClick(View v) {
+        if (v.getId() == R.id.button_ctrl) {
+            // 如果是控制键 初始化文件
+            if (!isRecording) {
+                // 当没有开始录音才有效
+                if (!isRecordStarted) {
+                    isRecordStarted = true;
+                    for (PositionButtonWrapper button : positionClassButtonMap.values()) {
+                        button.getButton().setEnabled(true);
+                        button.getButton().setTextColor(getResources().getColor(R.color.black));
                     }
-                    mAudioManager.startBluetoothSco();
-                    Log.i(TAG, "再次startBluetoothSco()");
-                    System.out.println("再次startBluetoothSco()");
-                    //startRecording();
+                    currentDataSetName = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(new Date().getTime());
+                    currentDataSetName += "_" + UUID.randomUUID();
+                    currentDataSetName += ".arff";
+                    buttonControl.setText("停止");
+                    buttonControl.setBackgroundColor(getResources().getColor(R.color.light_green));
+                    // 设置配置项是否可用
+                    sbAdjWindowSize.setEnabled(false);
+                    sbAdjOverlapPercentage.setEnabled(false);
+                    switchSaveRawAudio.setEnabled(false);
+                    txtAdjNoiseRecordTime.setEnabled(false);
+                } else {
+                    // 设置停止记录
+                    isRecordStarted = false;
+                    for (PositionButtonWrapper button : positionClassButtonMap.values()) {
+                        button.getButton().setEnabled(false);
+                        button.getButton().setBackgroundColor(getResources().getColor(R.color.gray));
+                        button.getButton().setTextColor(getResources().getColor(R.color.dark_gray));
+                    }
+                    buttonControl.setText("开始");
+                    buttonControl.setBackgroundColor(getResources().getColor(R.color.gray));
+                    // 设置配置项是否可用
+                    sbAdjWindowSize.setEnabled(true);
+                    sbAdjOverlapPercentage.setEnabled(true);
+                    switchSaveRawAudio.setEnabled(true);
+                    txtAdjNoiseRecordTime.setEnabled(true);
                 }
             }
-        }, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_CHANGED));
-    }
-
-
-    public void stopRecording(){
-        System.out.println("stopRecording");
-        //mAudioManager.stopBluetoothSco();
-        mRecorder.stop();
-        mRecorder.release();
-        mRecorder = null;
-        if (mAudioManager.isBluetoothScoOn()) {
-            mAudioManager.setBluetoothScoOn(false);
-            mAudioManager.stopBluetoothSco();
+        } else {
+            // 获取当前点击的button信息
+            PositionButtonWrapper positionButtonWrapper = positionClassButtonMap.get(v.getId());
+            Button currentButton = positionButtonWrapper.getButton();
+            if (!isRecording) {
+                currentButton.setText("停止");
+                currentButton.setBackgroundColor(getResources().getColor(R.color.blue));
+                currentButton.setTextColor(getResources().getColor(R.color.white));
+                recordFlag = positionButtonWrapper.getButtonLogicID();
+                switchCurrentButton(positionButtonWrapper);
+                currentButtonWrapper.setRecordingTime(System.currentTimeMillis()); //设置录音起始时间
+                System.out.println("当前: " + recordFlag);
+                startRecording();
+            } else if (recordFlag == positionButtonWrapper.getButtonLogicID()) {
+                // 停止录制
+                stopRecording();
+                currentButton.setText(positionButtonWrapper.getLabel());
+                currentButton.setBackgroundColor(getResources().getColor(R.color.white));
+                currentButton.setTextColor(getResources().getColor(R.color.black));
+            }
         }
-        Log.i(TAG,"stopRecording");
     }
 
-    class BlueRecordThread implements Runnable {
+    public void startRecording() {
+        System.out.println(currentDataSetName);
+        isRecording = true;
+        Log.i(TAG, "startRecording");
+        // 开始录音,计算并写入
+        recordThread = new RecordThread();
+        recordThreadExecutor = new Thread(recordThread);
+        recordThreadExecutor.start();
+    }
+
+    public void stopRecording() {
+        try {
+            // 停止线程
+            isRecording = false;
+            recordThreadExecutor.join();
+            Log.i(TAG, "stopRecording");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    class RecordThread implements Runnable {
         @Override
         public void run() {
-            //startRecording();
-            writeDateTOFile();
-            dataOutput();
-            System.out.println("writeDataToFile");
+            Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
+            // 录制并计算噪声特征
+//            recordAndCalcNoiseFeat();
+            // 录制正常声信号
+            try {
+                recordAndProcessData();
+                System.out.println("Data Written.");
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (final Exception e) {
+                e.printStackTrace();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(CollectionActivity.this, "发生严重错误: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+            // recordFlag要在录音结束后置0
         }
     }
 
+    class NotifyNoiseRemainTimeThread implements Runnable {
 
-    private void dataOutput() {
-        /*while(data.size() > windowLength){
-            List<Byte> datalist = data.subList(0,windowLength);
-            System.out.println("windowLength:"+windowLength);
-            System.out.println("datalistsize:"+datalist.size());
-            for(int i=0;i<datalist.size();i++){
-                System.out.println("data"+i+": "+data.get(i));
-                System.out.println("datalist"+i+": "+datalist.get(i));
+        private Double remainTime;
 
-                *//*
-                 ** By Y4
-                 *//*
-                MakeArffFile.calculate(datalist, recordTyp);
-            }
-            for(int i=0;i<windowLength/2;i++){
-                data.remove(0);
-            }
-        }*/
+        public NotifyNoiseRemainTimeThread(Double remainTime) {
+            this.remainTime = remainTime;
+        }
+
+        @Override
+        public void run() {
+            waitingDialog.setMessage(String.format("剩余时间: %.1fs", remainTime));
+        }
     }
+
+    /*
+     * 计算噪声特征并初始化噪声消除类
+     * */
+    private void recordAndCalcNoiseFeat() {
+        final byte[] inputSignal = new byte[bufferSizeInBytes];
+        List<Short> noiseSignal = new ArrayList<>();
+        // 读取噪声信号 读取 sampleRateInHz/2*n秒的数据
+        // 设置等待窗口
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                waitingDialog = new ProgressDialog(CollectionActivity.this);
+                waitingDialog.setTitle("请保持安静,正在采集环境噪声数据");
+                waitingDialog.setMessage("请等待...");
+                waitingDialog.setIndeterminate(true);
+                waitingDialog.setCancelable(false);
+                waitingDialog.show();
+            }
+        });
+        // 实例化录音
+        AudioRecord mRecorder = new AudioRecord(audioSource, sampleRateInHz,
+                channelConfig, audioFormat, bufferSizeInBytes);
+        mRecorder.startRecording();
+        while (noiseSignal.size() < sampleRateInHz * noiseLengthInSecond) {
+            final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
+            assert readsize % 2 == 0;
+            // 计算真实数值
+            for (int i = 0; i < readsize; i += 2) {
+                noiseSignal.add((short) ParseUtil.rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+            }
+            System.out.println(noiseSignal.size() / readsize);
+            if (noiseSignal.size() / readsize % 10 == 0) {
+                // 在界面上显示噪声录制的进度
+                double progrss = noiseLengthInSecond * (1 - (double) noiseSignal.size() / (sampleRateInHz * noiseLengthInSecond));
+                progrss = progrss < 0.1 ? 0.1 : progrss;
+                runOnUiThread(new NotifyNoiseRemainTimeThread(progrss));
+            }
+        }
+        System.out.println(noiseSignal.size());
+        spectralSubstraction = new SpectralSubtraction(noiseSignal, 1024, noiseLengthInSecond * sampleRateInHz / 1024 / 2);
+        waitingDialog.dismiss();
+        // 重置录音机
+        mRecorder.stop();
+        mRecorder.release();
+        System.out.println("噪声记录完毕");
+    }
+
 
     /**
      * 这里将数据写入文件，但是并不能播放，因为AudioRecord获得的音频是原始的裸音频，
      * 如果需要播放就必须加入一些格式或者编码的头信息。但是这样的好处就是你可以对音频的 裸数据进行处理，比如你要做一个爱说话的TOM
      * 猫在这里就进行音频的处理，然后重新封装 所以说这样得到的音频比较容易做一些音频的处理。
      */
-    private void writeDateTOFile() {
+    private void recordAndProcessData() throws IOException {
+//        final Button currentButton = currentButtonWrapper.getButton();
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
-        final byte[] audiodata = new byte[bufferSizeInBytes];
-        /*FileOutputStream fos = null;
-        try {
-            File file = new File(mFileName);
-            if (file.exists()) {
-                file.delete();
+        final byte[] inputSignal = new byte[bufferSizeInBytes];
+//        ArrayList<Byte> totalSignal = new ArrayList<>();
+        ArrayList<Double> signalBuffer = new ArrayList<>();
+        System.out.println("windowLength:" + windowLength);
+        // 舍弃前面若干帧
+        int ignoreFrameCounter = 5;
+        int windowStart = 0;
+        // 实例化录音 大小为接近windowLength的read整数
+        AudioRecord mRecorder = new AudioRecord(audioSource, sampleRateInHz,
+                channelConfig, audioFormat, 4 * bufferSizeInBytes);
+        if (isSaveRawAudioData) {
+            // 如果设置为写入原始音频 则初始化并写入原始音频
+            File recordingFile = new File(Constant.FILE_PATH + currentDataSetName + "_raw/" + recordFlag + ".pcm");
+            System.out.println(recordingFile);
+            File fileParent = recordingFile.getParentFile();
+            if (!fileParent.exists()) {
+                fileParent.mkdirs();
+                System.out.println("创建了原始数据的父文件夹");
             }
-
-            file.createNewFile();
-
-            fos = new FileOutputStream(file);// 建立一个可存取字节的文件
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
-        while (recordering == true) {
-
-            //Constants.audioDeviceInfo_Blu = mRecorder.getRoutedDevice();
-            //System.out.println("audioDeviceInfo Blu:" + Constants.audioDeviceInfo_Blu.getType());
-
-            final int readsize = mRecorder.read(audiodata, 0, bufferSizeInBytes);
-            //data.addAll(audiodata);
-            //System.out.println("blue readsize:"+readsize);
-            System.out.println("blue adudioData:"+audiodata.toString());
-
-            for(int i =0;i<audiodata.length;i++){
-                data.add(audiodata[i]);
-                //System.out.println("audiodata"+i+":"+audiodata[i]);
-            }
-
-            while(data.size() > windowLength){
-                List<Byte> datalist = data.subList(0,windowLength);
-                System.out.println("windowLength:"+windowLength);
-                System.out.println("datalistsize:"+datalist.size());
-                /*for(int i=0;i<datalist.size();i++){
-                    System.out.println("data"+i+": "+data.get(i));
-                    System.out.println("datalist"+i+": "+datalist.get(i));
-
-
-
-                }*/
-                 /*
-                 * By Y4
-                 */
-                MakeArffFile.calculate(datalist, recordTyp);
-                for(int i=0;i<windowLength;i++){
-                    data.remove(0);
-                }
-            }
-            /*if (AudioRecord.ERROR_INVALID_OPERATION != readsize) {
-                try {
-                    fos.write(audiodata);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            Timer timer = new Timer();
-            if (first)
-                timer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        long v = 0;
-                        // 将 buffer 内容取出，进行平方和运算
-                        for (int i = 0; i < audiodata.length; i++) {
-                            v += audiodata[i] * audiodata[i];
-                        }
-                        // 平方和除以数据总长度，得到音量大小。
-                        double mean = v / (double) readsize;
-                        final double volume = 10 * Math.log10(mean);
-                        MainActivity.instance.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                MainActivity.instance.voice.setText(volume + "");
-                            }
-                        });
-                    }
-                }, 0, 1000);*/
-
+            recordingFile.createNewFile();
+            rawDataStream = new DataOutputStream(
+                    new BufferedOutputStream(
+                            new FileOutputStream(recordingFile)
+                    )
+            );
         }
-        /*try {
-            fos.close();// 关闭写入流
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
+        mRecorder.startRecording();
+        while (isRecording) {
+            final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
+            if (ignoreFrameCounter > 0) {
+                ignoreFrameCounter--;
+                continue;
+            }
+            for (int i = 0; i < inputSignal.length; i += 2) {
+//                totalSignal.add(anInputSignal);
+                signalBuffer.add((double) ParseUtil.rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+                if (isSaveRawAudioData) {
+                    rawDataStream.write(inputSignal[i]);
+                    rawDataStream.write(inputSignal[i + 1]);
+                }
+            }
+//            // 清除噪声
+//            List<Short> inputSignal_16bit = new ArrayList<>();
+//            // 计算真实数值
+//            for (int i = 0; i < inputSignal.length; i += 2) {
+//                inputSignal_16bit.add((short) rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+//            }
+//            assert spectralSubstraction != null;
+//            spectralSubstraction.setSignal(inputSignal_16bit);
+//            // 对inputSignal进行降噪
+//            short[] inputSignal_16bit_denoise = spectralSubstraction.noiseSubtraction();
+//            for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
+//                signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
+//            }
+            while (windowLength < signalBuffer.size()) {
+                List<Double> rawDatalist = signalBuffer.subList(0, windowLength);
+                // 存储数值型数据
+                // 极其重要：numericalDatalist的长度是inputSignal的一半 否则会出现一半窗口的数值都是0
+                double[] numericalDatalist = new double[rawDatalist.size()];
+//             将原始数据转换成double型数值数据 为了防止rawdata长度是奇数 需要判断时i+1
+                for (int i = 0; i < rawDatalist.size(); ++i) {
+                    numericalDatalist[i] = rawDatalist.get(i);
+                }
+                MakeArffFile.calculate(numericalDatalist, null, String.valueOf(recordFlag), currentDataSetName, sampleRateInHz, channelConfig, windowLength, overlapPercentage);
+                ArrayList<Double> newSignalBuffer = new ArrayList<>();
+//                windowStart = (int) ((double) windowLength * (1 - (double) overlapPercentage / 100));
+                windowStart = windowLength * (100 - overlapPercentage) / 100;
+                for (int i = windowStart; i < signalBuffer.size(); ++i) {
+                    newSignalBuffer.add(signalBuffer.get(i));
+                }
+                signalBuffer = newSignalBuffer;
+//                System.out.println("目前signalbuffer：" + signalBuffer.size());
+                // 计算已经录音的时间
+                final double recordingTime = 0.001 * (System.currentTimeMillis() - currentButtonWrapper.getRecordingTime());
+                if (((int) (recordingTime * 10) % 2 == 0)) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            currentButtonWrapper.getButton().setText(String.format("%.1fs", recordingTime));
+                        }
+                    });
+                }
+            }
+        }
+        System.out.println("计算信号特征");
+        if (isSaveRawAudioData) {
+            rawDataStream.close();
+        }
+        // 停止并释放录音实例
+        mRecorder.stop();
+        mRecorder.release();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                currentButtonWrapper.getButton().setText(currentButtonWrapper.getLabel());
+            }
+        });
+    }
+
+    private void switchCurrentButton(PositionButtonWrapper positionButtonWrapper) {
+        this.currentButtonWrapper = positionButtonWrapper;
     }
 }

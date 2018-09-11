@@ -1,601 +1,767 @@
 package tooth.activity;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
+import android.app.ProgressDialog;
+import android.app.Service;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.media.AudioFormat;
-import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
-import android.provider.DocumentsContract;
+import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-
-import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Timer;
+import java.util.Map;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
-import tooth.data.ServerInterface;
 import tooth.util.Constants;
 import cjh.recorder.R;
-import tooth.util.ServerConstant;
-import weka.AudioFeature;
+import tooth.util.ParseUtil;
+import tooth.util.PositionButtonWrapper;
 import weka.Constant;
+import weka.MakeArffFile;
 import weka.MakeDecision;
 
 /**
  * Created by admin on 2017/10/13.
+ * Edited By Cui jiahe 2017/8/4.
  */
 
 public class DisplayActivity extends AppCompatActivity {
 
-    private ImageView imageView1, imageView2;
+    private ImageView inner_dfi, inner_dlbi, inner_drbi, inner_ufi, inner_ulbi, inner_urbi;
+    private ImageView outer_dfo, outer_dlb, outer_drb, outer_ufo, outer_ulb, outer_urb;
 
-    private ImageView inner_dfi,inner_dlbi,inner_drbi,inner_ufi,inner_ulbi,inner_urbi;
-    private ImageView outer_dfo,outer_dlb,outer_drb,outer_ufo,outer_ulb,outer_urb;
+    private Button buttonStartDetect;
+    private TextView txtPositionStatus;
 
-    private Button button, button_result;
+    private ProgressDialog msgDialog;
 
-    private String filePath;
-    private Timer timer;
-    private int imageFlag = 0;
-    private boolean imgFlag = false;
+    int[] counterAtPosition = new int[Constant.WEKA_CLASSES.length + 1];
+    double[] timeAtPosition = new double[Constant.WEKA_CLASSES.length + 1];
+    boolean[] finishedFlags = new boolean[Constant.WEKA_CLASSES.length + 1];
+    Map<ImageView, Integer> currentImageResources = new HashMap<>();
 
-    private boolean[] flagList = new boolean[19];
-
-    private int time_seconds = 0;
-    private int scores = 0;
-
-    int[] count = new int[18];
-
-    private MyThread thread_count;
-    private MyThread_getCurrentState thread_getCurrentState;
-    private MyThread_getLatestScore thread_getLatestScore;
-
-    private boolean picFlag = false;
-
-
-    File extDir = Environment.getExternalStorageDirectory();
-
-    private String TAG = "BluetoothRecord";
-    private AudioRecord mRecorder = null;
-    private AudioManager mAudioManager = null;
-    private static String mFileName = null;
+    Vibrator vibrator = null;
 
     // 音频获取源
     private static int audioSource = MediaRecorder.AudioSource.MIC;
     // 设置音频采样率，44100是目前的标准
     private static int sampleRateInHz = 44100;
     // 设置音频的录制的声道CHANNEL_IN_STEREO为双声道，CHANNEL_CONFIGURATION_MONO为单声道
-    private static int channelConfig = AudioFormat.CHANNEL_IN_STEREO;
+    private static int channelConfig = AudioFormat.CHANNEL_IN_MONO;
     // 音频数据格式:PCM 16位每个样本。保证设备支持。PCM 8位每个样本。不一定能得到设备支持。
     private static int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
     // 缓冲区字节大小
     private static int bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz,
             channelConfig, audioFormat);
 
-    private int windowLength = sampleRateInHz / 2;//3000;
-    private ArrayList<Byte> data = new ArrayList<>();
+    private int windowLength = 17288;//3000;
+    private int overlapPercentage = 0;//3000;
 
-    private static boolean status_flag = false;
+    private double brushingTime = 0;
+    private boolean isRecording = false;
+    private Thread recordThreadExecutor;
+    private Thread blinkThreadExecutor;
+
+    RecordApplication application;
+    // 处理闪烁
+    private Handler blinkHandler;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.display_layout);
 
-        mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-        imageView1 = (ImageView)findViewById(R.id.img1);
-        imageView2 = (ImageView)findViewById(R.id.img2);
+        inner_dfi = (ImageView) findViewById(R.id.inner_dfi);
+        inner_dlbi = (ImageView) findViewById(R.id.inner_dlbi);
+        inner_drbi = (ImageView) findViewById(R.id.inner_drbi);
+        inner_ufi = (ImageView) findViewById(R.id.inner_ufi);
+        inner_ulbi = (ImageView) findViewById(R.id.inner_ulbi);
+        inner_urbi = (ImageView) findViewById(R.id.inner_urbi);
 
-        inner_dfi = (ImageView)findViewById(R.id.inner_dfi);
-        inner_dlbi =(ImageView)findViewById(R.id.inner_dlbi);
-        inner_drbi =(ImageView)findViewById(R.id.inner_drbi);
-        inner_ufi = (ImageView)findViewById(R.id.inner_ufi);
-        inner_ulbi =(ImageView)findViewById(R.id.inner_ulbi);
-        inner_urbi =(ImageView)findViewById(R.id.inner_urbi);
-
-        outer_dfo = (ImageView)findViewById(R.id.outer_dfo);
-        outer_dlb = (ImageView)findViewById(R.id.outer_dlb);
-        outer_drb = (ImageView)findViewById(R.id.outer_drb);
-        outer_ufo = (ImageView)findViewById(R.id.outer_ufo);
-        outer_ulb = (ImageView)findViewById(R.id.outer_ulb);
-        outer_urb = (ImageView)findViewById(R.id.outer_urb);
-
-
-        button = (Button)findViewById(R.id.audiorecorder);
-        button.setOnClickListener(new View.OnClickListener() {
+        outer_dfo = (ImageView) findViewById(R.id.outer_dfo);
+        outer_dlb = (ImageView) findViewById(R.id.outer_dlb);
+        outer_drb = (ImageView) findViewById(R.id.outer_drb);
+        outer_ufo = (ImageView) findViewById(R.id.outer_ufo);
+        outer_ulb = (ImageView) findViewById(R.id.outer_ulb);
+        outer_urb = (ImageView) findViewById(R.id.outer_urb);
+        initCurrentImageMap();
+        buttonStartDetect = (Button) findViewById(R.id.audiorecorder);
+        buttonStartDetect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!status_flag) {
-                    button.setText("数据采集中");
-                    //startRecording();
-                    status_flag = true;
-                    thread_count = new MyThread();         // start thread
-                    thread_count.start();
-                    thread_getCurrentState = new MyThread_getCurrentState();
-                    thread_getCurrentState.start();
-
-                } else {
-                    button.setText("开始采集");
-                    //stopRecording();
-                    //thread_count.interrupt();
-                    status_flag = false;
-                    thread_getLatestScore = new MyThread_getLatestScore();
-                    thread_getLatestScore.start();
-                    //count_scores();
-                }
-            }
-        });
-
-        button_result = (Button)findViewById(R.id.display_result);
-        button_result.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(DisplayActivity.this,BrushResultActivity.class);
-                Bundle bundle = new Bundle();
-                bundle.putInt(Constants.TOTAL_TIME,time_seconds);
-                bundle.putInt(Constants.SCORES,scores);
-                bundle.putBooleanArray(Constants.STRINGS,flagList);
-                intent.putExtras(bundle);
-                startActivity(intent);
-            }
-        });
-        button_result.setClickable(false);
-
-    }
-
-    private void count_scores() {
-        for(int i=3;i<19;i++){
-            if(flagList[i]){
-                scores++;
-            }
-        }
-        scores = (int) (scores/16.0 * 100);
-    }
-
-    class BlueRecordThread implements Runnable {
-        @Override
-        public void run() {
-            //startRecording();
-            writeDateTOARFF();
-            System.out.println("writeDataToFile");
-        }
-    }
-
-    private void writeDateTOARFF() {
-        // new一个byte数组用来存一些字节数据，大小为缓冲区大小
-        final byte[] audiodata = new byte[bufferSizeInBytes];
-        /*FileOutputStream fos = null;
-        try {
-            File file = new File(mFileName);
-            if (file.exists()) {
-                file.delete();
-            }
-
-            file.createNewFile();
-
-            fos = new FileOutputStream(file);// 建立一个可存取字节的文件
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
-        while (status_flag) {
-
-            //Constants.audioDeviceInfo_Blu = mRecorder.getRoutedDevice();
-            //System.out.println("audioDeviceInfo Blu:" + Constants.audioDeviceInfo_Blu.getType());
-
-            final int readsize = mRecorder.read(audiodata, 0, bufferSizeInBytes);
-            //data.addAll(audiodata);
-            //System.out.println("blue readsize:"+readsize);
-            System.out.println("blue adudioData:"+audiodata.toString());
-
-            for(int i =0;i<audiodata.length;i++){
-                data.add(audiodata[i]);
-                //System.out.println("audiodata"+i+":"+audiodata[i]);
-            }
-
-            while(data.size() > windowLength){
-                List<Byte> datalist = data.subList(0,windowLength);
-                System.out.println("windowLength:"+windowLength);
-                System.out.println("datalistsize:"+datalist.size());
-                /*for(int i=0;i<datalist.size();i++){
-                    System.out.println("data"+i+": "+data.get(i));
-                    System.out.println("datalist"+i+": "+datalist.get(i));
-
-
-
-                }*/
-                 /*
-                 * By Y4
-                 */
-                double[] temp = new double[datalist.size()];
-                for(int i=0; i<datalist.size(); i++)
-                    temp[i] = Double.valueOf(datalist.get(i));
-                double t_ret[] = AudioFeature.timedomain(temp);
-                double f_ret[] = AudioFeature.freqdomain(temp);
-                String[] attr = new String[23];
-                for (int i=0; i<t_ret.length; i++)
-                    attr[i] = String.valueOf(t_ret[i]);
-
-                for (int i=0; i<f_ret.length; i++)
-                    attr[10+i] = String.valueOf(f_ret[i]);
-                        //tmp = tmp + String.valueOf(f_ret[i]) + ",";
-                attr[22] = "?";
-
-                //分类结果
-                int class_type = MakeDecision.makedecision(attr);
-                Log.e("====================", String.valueOf(class_type));
-                count[class_type % 18]++;
-                if (count[class_type % 18] >= 2) {
-                    Log.e("!!!!!!!!!!!!!!!!", "!!!!!!!!!!");
-                    switch (class_type % 18 + 1) {
-                        case 3: runOnUiThread(new Runnable() {public void run() {switchPictures(3);}}); break;
-                        case 4: runOnUiThread(new Runnable() {public void run() {switchPictures(4);}}); break;
-                        case 5: runOnUiThread(new Runnable() {public void run() {switchPictures(5);}}); break;
-                        case 6: runOnUiThread(new Runnable() {public void run() {switchPictures(6);}}); break;
-                        case 7: runOnUiThread(new Runnable() {public void run() {switchPictures(7);}}); break;
-                        case 8: runOnUiThread(new Runnable() {public void run() {switchPictures(8);}}); break;
-                        case 9: runOnUiThread(new Runnable() {public void run() {switchPictures(9);}}); break;
-                        case 10: runOnUiThread(new Runnable() {public void run() {switchPictures(10);}}); break;
-                        case 11: runOnUiThread(new Runnable() {public void run() {switchPictures(11);}}); break;
-                        case 12: runOnUiThread(new Runnable() {public void run() {switchPictures(12);}}); break;
-                        case 13: runOnUiThread(new Runnable() {public void run() {switchPictures(13);}}); break;
-                        case 14: runOnUiThread(new Runnable() {public void run() {switchPictures(14);}}); break;
-                        case 15: runOnUiThread(new Runnable() {public void run() {switchPictures(15);}}); break;
-                        case 16: runOnUiThread(new Runnable() {public void run() {switchPictures(16);}}); break;
-                        case 17: runOnUiThread(new Runnable() {public void run() {switchPictures(17);}}); break;
-                        case 18: runOnUiThread(new Runnable() {public void run() {switchPictures(18);}}); break;
-                    }
-
-
-                    count[class_type % 18] = 0;
-                }
-                for(int i=0;i<windowLength;i++){
-                    data.remove(0);
-                }
-
-            }
-            /*if (AudioRecord.ERROR_INVALID_OPERATION != readsize) {
-                try {
-                    fos.write(audiodata);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            Timer timer = new Timer();
-            if (first)
-                timer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        long v = 0;
-                        // 将 buffer 内容取出，进行平方和运算
-                        for (int i = 0; i < audiodata.length; i++) {
-                            v += audiodata[i] * audiodata[i];
-                        }
-                        // 平方和除以数据总长度，得到音量大小。
-                        double mean = v / (double) readsize;
-                        final double volume = 10 * Math.log10(mean);
-                        MainActivity.instance.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                MainActivity.instance.voice.setText(volume + "");
-                            }
-                        });
-                    }
-                }, 0, 1000);*/
-        }
-        /*try {
-            fos.close();// 关闭写入流
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
-    }
-
-    public void startRecording(){
-
-        mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
-        mFileName += "/record.3gp";
-        mRecorder = new AudioRecord(audioSource, sampleRateInHz,
-                channelConfig, audioFormat, bufferSizeInBytes);
-
-        /*if(Constants.flag2){
-        }*/
-        //AudioDeviceInfo audioDeviceInfo = new AudioDeviceInfo();
-        //mRecorder.setPreferredDevice(AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
-        /*mRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setOutputFile(mFileName);
-        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);*/
-        /*try {
-            mRecorder.prepare();
-        } catch (Exception e) {
-            // TODO: handle exception
-            Log.i(TAG, "prepare() failed!");
-        }*/
-        if (!mAudioManager.isBluetoothScoAvailableOffCall()) {
-            Log.i(TAG, "系统不支持蓝牙录音");
-            System.out.println("系统不支持蓝牙录音");
-            return;
-        }
-        Log.i(TAG, "系统支持蓝牙录音");
-        System.out.println("系统支持蓝牙录音");
-        mAudioManager.stopBluetoothSco();
-        mAudioManager.startBluetoothSco();//蓝牙录音的关键，启动SCO连接，耳机话筒才起作用
-
-        registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
-
-                if (AudioManager.SCO_AUDIO_STATE_CONNECTED == state) {
-                    Log.i(TAG, "AudioManager.SCO_AUDIO_STATE_CONNECTED");
-                    System.out.println("AudioManager.SCO_AUDIO_STATE_CONNECTED");
-                    mAudioManager.setBluetoothScoOn(true);  //打开SCO
-                    Log.i(TAG, "Routing:" + mAudioManager.isBluetoothScoOn());
-                    System.out.println("Routing:" + mAudioManager.isBluetoothScoOn());
-                    mAudioManager.setMode(AudioManager.STREAM_MUSIC);
-                    //mRecorder.start();//开始录音
-                    mRecorder.startRecording();
-                    //Constants.audioDeviceInfo_Blu = mRecorder.getRoutedDevice();
-                    //System.out.println("audioDeviceInfo Blu" + Constants.audioDeviceInfo_Blu.getType());
-                    new Thread(new DisplayActivity.BlueRecordThread()).start();
-                    unregisterReceiver(this);  //别遗漏
-                }else {//等待一秒后再尝试启动SCO
+                if (!isRecording) {
                     try {
-                        Thread.sleep(10000);
+                        isRecording = true;
+                        recordThreadExecutor = new Thread(new RecordThread());
+                        recordThreadExecutor.start();
+                        // 控制闪烁
+                        blinkThreadExecutor = new Thread(new BlinkThread());
+                        blinkThreadExecutor.start();
+                        brushingTime = System.currentTimeMillis();
+                        // 初始化flag以及牙面
+                        switchPictures(2);
+                        for (int i = 0; i < finishedFlags.length; ++i) {
+                            finishedFlags[i] = false;
+                            counterAtPosition[i] = 0;
+                            timeAtPosition[i] = 0;
+                        }
+                        initCurrentImageMap();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    try {
+                        brushingTime = System.currentTimeMillis() - brushingTime;
+                        isRecording = false;
+                        recordThreadExecutor.join();
+                        buttonStartDetect.setText("开始检测");
+                        buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
+                        txtPositionStatus.setText("");
+                        showResultActivity();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    mAudioManager.startBluetoothSco();
-                    Log.i(TAG, "再次startBluetoothSco()");
-                    System.out.println("再次startBluetoothSco()");
-                    //startRecording();
                 }
             }
-        }, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_CHANGED));
+        });
+
+        txtPositionStatus = (TextView) findViewById(R.id.txtPositionStatus);
+
+        // 初始化全局application
+        application = RecordApplication.getApplication();
+        // 消息窗口
+        msgDialog = new ProgressDialog(DisplayActivity.this);
+        // 检测预测模型是否已经载入
+        if (application.getPredictModel() == null) {
+            buttonStartDetect.setEnabled(false);
+            buttonStartDetect.setText("未载入模型");
+            buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.gray));
+        }
     }
 
+    private void initCurrentImageMap() {
+        // 初始化状态map
+        currentImageResources.put(inner_dfi, -1);
+        currentImageResources.put(inner_dlbi, -1);
+        currentImageResources.put(inner_drbi, -1);
+        currentImageResources.put(inner_ufi, -1);
+        currentImageResources.put(inner_ulbi, -1);
+        currentImageResources.put(inner_urbi, -1);
 
-    public void stopRecording(){
-        System.out.println("stopRecording");
-        //mAudioManager.stopBluetoothSco();
+        currentImageResources.put(outer_dfo, -1);
+        currentImageResources.put(outer_dlb, -1);
+        currentImageResources.put(outer_drb, -1);
+        currentImageResources.put(outer_ufo, -1);
+        currentImageResources.put(outer_ulb, -1);
+        currentImageResources.put(outer_urb, -1);
+    }
+
+    private void showResultActivity() {
+        Intent intent = new Intent(DisplayActivity.this, BrushResultActivity.class);
+        Bundle bundle = new Bundle();
+        bundle.putDoubleArray(Constants.TOTAL_TIME, timeAtPosition);
+        bundle.putBooleanArray(Constants.FINISHED, finishedFlags);
+        bundle.putDouble(Constants.BRUSHING_TIME, brushingTime);
+        intent.putExtras(bundle);
+        startActivity(intent);
+    }
+
+    class RecordThread implements Runnable {
+        @Override
+        public void run() {
+            try {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        buttonStartDetect.setText("检测中, 点击结束...");
+                        buttonStartDetect.setBackground(getResources().getDrawable(R.drawable.selector_primary));
+                        buttonStartDetect.setClickable(true);
+                    }
+                });
+                recordAndRecognize();
+            } catch (final Exception e) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // 处理发生的异常
+                        isRecording = false;
+                        buttonStartDetect.setText("开始检测");
+                        buttonStartDetect.setBackground(getResources().getDrawable(R.drawable.selector_success));
+                        msgDialog.setTitle("错误");
+                        msgDialog.setMessage(e.getMessage());
+                        msgDialog.show();
+                    }
+                });
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void countAndProcess(final int class_type) {
+        Message message = new Message();
+        Bundle bundle = new Bundle();
+        if (class_type >= 3 && !finishedFlags[class_type]) {
+            bundle.putInt("cur", class_type);
+            message.what = Constants.TOOTH_BLINK;
+            message.setData(bundle);
+            blinkHandler.sendMessage(message);
+        }
+        // 暂时取消实时牙面显示
+        //        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                txtPositionStatus.setText("实时: " + PositionButtonWrapper.labelList[class_type]);
+//            }
+//        });
+        int threshold = 2;
+        double maxTimeEachPosition = 3;
+        if (counterAtPosition[class_type] >= threshold) {
+            counterAtPosition[class_type]++;
+            timeAtPosition[class_type] += counterAtPosition[class_type] * 0.5;
+            counterAtPosition[class_type] = 0;
+        } else {
+            // 将其他类别置0
+            for (int i = 0; i < counterAtPosition.length; ++i) {
+                if (i != class_type) {
+                    counterAtPosition[i] = 0;
+                }
+            }
+            // 当前类别+1
+            counterAtPosition[class_type]++;
+        }
+        if (timeAtPosition[class_type] >= maxTimeEachPosition) {
+            // 如果达到指定的刷牙时间
+            if (class_type >= 3 && !finishedFlags[class_type]) {
+                message = new Message();
+                bundle = new Bundle();
+                message.what = Constants.TOOTH_DONE;
+                bundle.putInt("cur", class_type);
+                message.setData(bundle);
+                blinkHandler.sendMessage(message);
+            }
+            finishedFlags[class_type] = true;
+        }
+        for (int i = 0; i < counterAtPosition.length; ++i) {
+            System.out.print(timeAtPosition[i] + " ");
+        }
+        System.out.println();
+    }
+
+    private void recordAndRecognize() throws Exception {
+        // new一个byte数组用来存一些字节数据，大小为缓冲区大小
+        final byte[] inputSignal = new byte[bufferSizeInBytes];
+//        ArrayList<Byte> totalSignal = new ArrayList<>();
+        ArrayList<Double> signalBuffer = new ArrayList<>();
+        System.out.println("windowLength:" + windowLength);
+        // 舍弃前面若干帧
+        int ignoreFrameCounter = 5;
+        int windowStart = 0;
+        // 实例化录音 大小为接近windowLength的read整数
+        AudioRecord mRecorder = new AudioRecord(audioSource, sampleRateInHz,
+                channelConfig, audioFormat, 4 * bufferSizeInBytes);
+        mRecorder.startRecording();
+        while (isRecording) {
+            final int readsize = mRecorder.read(inputSignal, 0, bufferSizeInBytes);
+            if (ignoreFrameCounter > 0) {
+                ignoreFrameCounter--;
+                continue;
+            }
+            for (int i = 0; i < inputSignal.length; i += 2) {
+//                totalSignal.add(anInputSignal);
+                signalBuffer.add((double) ParseUtil.rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+            }
+//            // 清除噪声
+//            List<Short> inputSignal_16bit = new ArrayList<>();
+//            // 计算真实数值
+//            for (int i = 0; i < inputSignal.length; i += 2) {
+//                inputSignal_16bit.add((short) rawAudioDataToShort(inputSignal[i], inputSignal[i + 1]));
+//            }
+//            assert spectralSubstraction != null;
+//            spectralSubstraction.setSignal(inputSignal_16bit);
+//            // 对inputSignal进行降噪
+//            short[] inputSignal_16bit_denoise = spectralSubstraction.noiseSubtraction();
+//            for (short anInputSignal_16bit_denoise : inputSignal_16bit_denoise) {
+//                signalBuffer.addAll(shortToRawAudioData(anInputSignal_16bit_denoise));
+//            }
+            while (windowLength < signalBuffer.size()) {
+                List<Double> rawDatalist = signalBuffer.subList(0, windowLength);
+                // 存储数值型数据
+                // 极其重要：numericalDatalist的长度是inputSignal的一半 否则会出现一半窗口的数值都是0
+                double[] numericalDatalist = new double[rawDatalist.size()];
+//             将原始数据转换成double型数值数据 为了防止rawdata长度是奇数 需要判断时i+1
+                for (int i = 0; i < rawDatalist.size(); ++i) {
+                    numericalDatalist[i] = rawDatalist.get(i);
+                }
+                // 在这里处理
+                String[] features = MakeArffFile.buildFeatureVector(numericalDatalist);
+                int class_type = application.getPredictModel().predict(features);
+                class_type = Integer.valueOf(Constant.WEKA_CLASSES[class_type]);
+                this.countAndProcess(class_type);
+                System.out.println("预测结果: " + class_type + " => " + PositionButtonWrapper.labelList[class_type]);
+                // 窗口后移
+                ArrayList<Double> newSignalBuffer = new ArrayList<>();
+                windowStart = (int) ((double) windowLength * (1 - (double) overlapPercentage / 100));
+                for (int i = windowStart; i < signalBuffer.size(); ++i) {
+                    newSignalBuffer.add(signalBuffer.get(i));
+                }
+                signalBuffer = newSignalBuffer;
+            }
+        }
+        // 停止并释放录音实例
         mRecorder.stop();
         mRecorder.release();
-        mRecorder = null;
-        if (mAudioManager.isBluetoothScoOn()) {
-            mAudioManager.setBluetoothScoOn(false);
-            mAudioManager.stopBluetoothSco();
+    }
+
+    /*设置图片 如果resID是-1恢复原图片 否则设置对应的图片
+     * */
+    private void setImage(ImageView image, int resID, int class_type) {
+        if (resID != -1) {
+            image.setImageResource(resID);
+            currentImageResources.put(image, resID);
+        } else {
+            int id = currentImageResources.get(image);
+            if (id == -1) {
+                image.setImageDrawable(null);
+            } else {
+                image.setImageResource(id);
+            }
         }
-        Log.i(TAG,"stopRecording");
     }
 
     private void switchPictures(int flag) {
         //text.setText(""+flag);
-        switch (flag){
+        switch (flag) {
             case 2:
-                if(flagList[2]){
-                    //第二次漱口
-                    flagList[2] = false;
-                }
-                else{
-                    inner_dfi.setImageDrawable(null);
-                    inner_dlbi.setImageDrawable(null);
-                    inner_drbi.setImageDrawable(null);
-                    inner_ufi.setImageDrawable(null);
-                    inner_ulbi.setImageDrawable(null);
-                    inner_urbi.setImageDrawable(null);
-                    outer_dfo.setImageDrawable(null);
-                    outer_dlb.setImageDrawable(null);
-                    outer_drb.setImageDrawable(null);
-                    outer_ufo.setImageDrawable(null);
-                    outer_ulb.setImageDrawable(null);
-                    outer_urb.setImageDrawable(null);
-
-                    flagList[2] = true;
-                    for(int i=3;i<19;i++){
-                        flagList[i]=false;
-                    }
-                }
+                // 漱口就清空牙面 但是不清空flag
+                inner_dfi.setImageDrawable(null);
+                inner_dlbi.setImageDrawable(null);
+                inner_drbi.setImageDrawable(null);
+                inner_ufi.setImageDrawable(null);
+                inner_ulbi.setImageDrawable(null);
+                inner_urbi.setImageDrawable(null);
+                outer_dfo.setImageDrawable(null);
+                outer_dlb.setImageDrawable(null);
+                outer_drb.setImageDrawable(null);
+                outer_ufo.setImageDrawable(null);
+                outer_ulb.setImageDrawable(null);
+                outer_urb.setImageDrawable(null);
                 break;
             case 3:
-                if(flagList[6]){
-                    outer_ulb.setImageResource((R.mipmap.outer_ulb));
+                if (finishedFlags[6]) {
+                    setImage(outer_ulb, R.mipmap.outer_ulb, flag);
+                } else {
+                    setImage(outer_ulb, R.mipmap.outer_ulbo, flag);
                 }
-                else{
-                    outer_ulb.setImageResource(R.mipmap.outer_ulbo);
-                }
-                flagList[3]=true;
+                finishedFlags[3] = true;
                 break;
             case 4:
-                outer_ufo.setImageResource(R.mipmap.outer_ufo);
-                flagList[4]=true;
+                setImage(outer_ufo, R.mipmap.outer_ufo, flag);
+                finishedFlags[4] = true;
                 break;
             case 5:
-                if(flagList[7]){
-                    outer_urb.setImageResource(R.mipmap.outer_urb);
+                if (finishedFlags[7]) {
+                    setImage(outer_urb, R.mipmap.outer_urb, flag);
+                } else {
+                    setImage(outer_urb, R.mipmap.outer_urbo, flag);
                 }
-                else{
-                    outer_urb.setImageResource(R.mipmap.outer_urbo);
-                }
-                flagList[5]=true;
+                finishedFlags[5] = true;
                 break;
             case 6:
-                if(flagList[3]){
-                    outer_ulb.setImageResource(R.mipmap.outer_ulb);
+                if (finishedFlags[3]) {
+                    setImage(outer_ulb, R.mipmap.outer_ulb, flag);
+                } else {
+                    setImage(outer_ulb, R.mipmap.outer_ulbm, flag);
                 }
-                else{
-                    outer_ulb.setImageResource(R.mipmap.outer_ulbm);
-                }
-                flagList[6]=true;
+                finishedFlags[6] = true;
                 break;
             case 7:
-                if(flagList[5]){
-                    outer_urb.setImageResource(R.mipmap.outer_urb);
+                if (finishedFlags[5]) {
+                    setImage(outer_urb, R.mipmap.outer_urb, flag);
+                } else {
+                    setImage(outer_urb, R.mipmap.outer_urbm, flag);
                 }
-                else{
-                    outer_urb.setImageResource(R.mipmap.outer_urbm);
-                }
-                flagList[7]=true;
+                finishedFlags[7] = true;
                 break;
             case 8:
-                inner_ulbi.setImageResource(R.mipmap.inner_ulbi);
-                flagList[8]=true;
+                setImage(inner_ulbi, R.mipmap.inner_ulbi, flag);
+                finishedFlags[8] = true;
                 break;
             case 9:
-                inner_ufi.setImageResource(R.mipmap.inner_ufi);
-                flagList[9]=true;
+                setImage(inner_ufi, R.mipmap.inner_ufi, flag);
+                finishedFlags[9] = true;
                 break;
             case 10:
-                inner_urbi.setImageResource(R.mipmap.inner_urbi);
-                flagList[10]=true;
+                setImage(inner_urbi, R.mipmap.inner_urbi, flag);
+                finishedFlags[10] = true;
                 break;
             case 11:
-                if(flagList[14]){
-                    outer_dlb.setImageResource(R.mipmap.outer_dlb);
+                if (finishedFlags[14]) {
+                    setImage(outer_dlb, R.mipmap.outer_dlb, flag);
+                } else {
+                    setImage(outer_dlb, R.mipmap.outer_dlbo, flag);
                 }
-                else{
-                    outer_dlb.setImageResource(R.mipmap.outer_dlbo);
-                }
-                flagList[11]=true;
+                finishedFlags[11] = true;
                 break;
             case 12:
-                outer_dfo.setImageResource(R.mipmap.outer_dfo);
-                flagList[12]=true;
+                setImage(outer_dfo, R.mipmap.outer_dfo, flag);
+                finishedFlags[12] = true;
                 break;
             case 13:
-                if(flagList[15]){
-                    outer_drb.setImageResource(R.mipmap.outer_drb);
+                if (finishedFlags[15]) {
+                    setImage(outer_drb, R.mipmap.outer_drb, flag);
+                } else {
+                    setImage(outer_drb, R.mipmap.outer_drbo, flag);
                 }
-                else{
-                    outer_drb.setImageResource(R.mipmap.outer_drbo);
-                }
-                flagList[13]=true;
+                finishedFlags[13] = true;
                 break;
             case 14:
-                if(flagList[11]){
-                    outer_dlb.setImageResource(R.mipmap.outer_dlb);
+                if (finishedFlags[11]) {
+                    setImage(outer_dlb, R.mipmap.outer_dlb, flag);
+                } else {
+                    setImage(outer_dlb, R.mipmap.outer_dlbm, flag);
                 }
-                else{
-                    outer_dlb.setImageResource(R.mipmap.outer_dlbm);
-                }
-                flagList[14]=true;
+                finishedFlags[14] = true;
                 break;
             case 15:
-                if(flagList[13]){
-                    outer_drb.setImageResource(R.mipmap.outer_drb);
+                if (finishedFlags[13]) {
+                    setImage(outer_drb, R.mipmap.outer_drb, flag);
+                } else {
+                    setImage(outer_drb, R.mipmap.outer_drbm, flag);
                 }
-                else{
-                    outer_drb.setImageResource(R.mipmap.outer_drbm);
-                }
-                flagList[15]=true;
+                finishedFlags[15] = true;
                 break;
             case 16:
-                inner_dlbi.setImageResource(R.mipmap.inner_dlbi);
-                flagList[16]=true;
+                setImage(inner_dlbi, R.mipmap.inner_dlbi, flag);
+                finishedFlags[16] = true;
                 break;
             case 17:
-                inner_dfi.setImageResource(R.mipmap.inner_dfi);
-                flagList[17]=true;
+                setImage(inner_dfi, R.mipmap.inner_dfi, flag);
+                finishedFlags[17] = true;
                 break;
             case 18:
-                inner_drbi.setImageResource(R.mipmap.inner_drbi);
-                flagList[18]=true;
+                setImage(inner_drbi, R.mipmap.inner_drbi, flag);
+                finishedFlags[18] = true;
                 break;
             default:
         }
 
     }
 
-    final Handler handler = new Handler() {          // handle
-        public void handleMessage(Message msg) {
-            if(msg.what == 0) {
-                time_seconds++;
-            }
-            super.handleMessage(msg);
-        }
-    };
-
-    class MyThread extends Thread{      // thread
-
-        @Override
-        public void run() {
-            while (status_flag) {
-                try {
-                    Thread.sleep(1000);     // sleep 1000ms
-                    Message message = new Message();
-                    message.what = 0;
-                    handler.sendMessage(message);
-                    //Thread.sleep(200);
-                } catch (Exception e) {
-                    System.out.println(e.toString());
+    private void switchGreenPictures(int flag) {
+        switch (flag) {
+            case 3:
+                if (finishedFlags[6]) {
+                    outer_ulb.setImageResource(R.mipmap.outer_ulbo_g_1);
+                } else {
+                    outer_ulb.setImageResource(R.mipmap.outer_ulbo_g_2);
                 }
-            }
+                break;
+            case 4:
+                outer_ufo.setImageResource(R.mipmap.outer_ufo_g);
+                break;
+            case 5:
+                if (finishedFlags[7]) {
+                    outer_urb.setImageResource(R.mipmap.outer_urbo_g_1);
+                } else {
+                    outer_urb.setImageResource(R.mipmap.outer_urbo_g_2);
+                }
+                break;
+            case 6:
+                if (finishedFlags[3]) {
+                    outer_ulb.setImageResource(R.mipmap.outer_ulbm_g_1);
+                } else {
+                    outer_ulb.setImageResource(R.mipmap.outer_ulbm_g_2);
+                }
+                break;
+            case 7:
+                if (finishedFlags[5]) {
+                    outer_urb.setImageResource(R.mipmap.outer_urbm_g_1);
+                } else {
+                    outer_urb.setImageResource(R.mipmap.outer_urbm_g_2);
+                }
+                break;
+            case 8:
+                inner_ulbi.setImageResource(R.mipmap.inner_ulbi_g);
+                break;
+            case 9:
+                inner_ufi.setImageResource(R.mipmap.inner_ufi_g);
+                break;
+            case 10:
+                inner_urbi.setImageResource(R.mipmap.inner_urbi_g);
+                break;
+            case 11:
+                if (finishedFlags[14]) {
+                    outer_dlb.setImageResource(R.mipmap.outer_dlbo_g_1);
+                } else {
+                    outer_dlb.setImageResource(R.mipmap.outer_dlbo_g_2);
+                }
+                break;
+            case 12:
+                outer_dfo.setImageResource(R.mipmap.outer_dfo_g);
+                break;
+            case 13:
+                if (finishedFlags[15]) {
+                    outer_drb.setImageResource(R.mipmap.outer_drbo_g_1);
+                } else {
+                    outer_drb.setImageResource(R.mipmap.outer_drbo_g_2);
+                }
+                break;
+            case 14:
+                if (finishedFlags[11]) {
+                    outer_dlb.setImageResource(R.mipmap.outer_dlbm_g_1);
+                } else {
+                    outer_dlb.setImageResource(R.mipmap.outer_dlbm_g_2);
+                }
+                break;
+            case 15:
+                if (finishedFlags[13]) {
+                    outer_drb.setImageResource(R.mipmap.outer_drbm_g_1);
+                } else {
+                    outer_drb.setImageResource(R.mipmap.outer_drbm_g_2);
+                }
+                break;
+            case 16:
+                inner_dlbi.setImageResource(R.mipmap.inner_dlbi_g);
+                break;
+            case 17:
+                inner_dfi.setImageResource(R.mipmap.inner_dfi_g);
+                break;
+            case 18:
+                inner_drbi.setImageResource(R.mipmap.inner_drbi_g);
+                break;
+            default:
+        }
+
+    }
+
+    private void recoverPicture(int flag) {
+        int resID = -1;
+        switch (flag) {
+            case 3:
+                if (finishedFlags[6]) {
+                    setImage(outer_ulb, resID, flag);
+                } else {
+                    setImage(outer_ulb, resID, flag);
+                }
+                break;
+            case 4:
+                setImage(outer_ufo, resID, flag);
+                break;
+            case 5:
+                if (finishedFlags[7]) {
+                    setImage(outer_urb, resID, flag);
+                } else {
+                    setImage(outer_urb, resID, flag);
+                }
+                break;
+            case 6:
+                if (finishedFlags[3]) {
+                    setImage(outer_ulb, resID, flag);
+                } else {
+                    setImage(outer_ulb, resID, flag);
+                }
+                break;
+            case 7:
+                if (finishedFlags[5]) {
+                    setImage(outer_urb, resID, flag);
+                } else {
+                    setImage(outer_urb, resID, flag);
+                }
+                break;
+            case 8:
+                setImage(inner_ulbi, resID, flag);
+                break;
+            case 9:
+                setImage(inner_ufi, resID, flag);
+                break;
+            case 10:
+                setImage(inner_urbi, resID, flag);
+                break;
+            case 11:
+                if (finishedFlags[14]) {
+                    setImage(outer_dlb, resID, flag);
+                } else {
+                    setImage(outer_dlb, resID, flag);
+                }
+                break;
+            case 12:
+                setImage(outer_dfo, resID, flag);
+                break;
+            case 13:
+                if (finishedFlags[15]) {
+                    setImage(outer_drb, resID, flag);
+                } else {
+                    setImage(outer_drb, resID, flag);
+                }
+                break;
+            case 14:
+                if (finishedFlags[11]) {
+                    setImage(outer_dlb, resID, flag);
+                } else {
+                    setImage(outer_dlb, resID, flag);
+                }
+                break;
+            case 15:
+                if (finishedFlags[13]) {
+                    setImage(outer_drb, resID, flag);
+                } else {
+                    setImage(outer_drb, resID, flag);
+                }
+                break;
+            case 16:
+                setImage(inner_dlbi, resID, flag);
+                break;
+            case 17:
+                setImage(inner_dfi, resID, flag);
+                break;
+            case 18:
+                setImage(inner_drbi, resID, flag);
+                break;
+            default:
         }
     }
 
-    final Handler handler_getCurrentState = new Handler() {          // handle
-        public void handleMessage(Message msg) {
-            switchPictures(msg.what+1);
-            Log.i(Constants.TAG,"getCurrentState_thread result :"+ msg.what);
-        }
-    };
-
-    class MyThread_getCurrentState extends Thread{      // thread
-
-        @Override
-        public void run() {
-            while (status_flag) {
-                Log.i(Constants.TAG,"getCurrentState_thread runing ...");
-                try {
-                    Thread.sleep(1000);     // sleep 1000ms
-
-                    Message message = new Message();
-                    message.what = ServerInterface.getCurrentState();
-                    handler_getCurrentState.sendMessage(message);
-
-                } catch (Exception e) {
-                    System.out.println(e.toString());
-                }
-            }
-        }
-    }
-
-    final Handler handler_getLatestScore = new Handler() {          // handle
-        public void handleMessage(Message msg) {
-            scores = msg.what;
-            button_result.setClickable(true);
-            Toast.makeText(DisplayActivity.this,"已结束",Toast.LENGTH_SHORT).show();
-        }
-    };
-
-    class MyThread_getLatestScore extends Thread{      // thread
-
-        @Override
-        public void run() {
-            Log.i(Constants.TAG,"getLastScore_thread runing ...");
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Toast.makeText(this, "正在处理未停止的录音进程", Toast.LENGTH_SHORT).show();
+        System.out.println("停止录音");
+        this.isRecording = false;
+        if (this.recordThreadExecutor != null) {
             try {
-                Message message = new Message();
-                message.what = ServerInterface.getLatestScore();
-                handler_getLatestScore.sendMessage(message);
-
-            } catch (Exception e) {
-                System.out.println(e.toString());
+                this.recordThreadExecutor.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(1, 100, 1, "载入模型");//动态添加一个按钮；
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case 100:
+                System.out.println("载入模型");
+                loadModel();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    /*载入模型
+     */
+    private void loadModel() {
+        Thread loadModelThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            msgDialog.setTitle("载入模型中...");
+                            msgDialog.setMessage("请等待...");
+                            msgDialog.setIndeterminate(true);
+                            msgDialog.setCancelable(false);
+                            msgDialog.show();
+                        }
+                    });
+                    application.setPredictModel(new MakeDecision());
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            msgDialog.setMessage("载入成功");
+                            msgDialog.dismiss();
+                            buttonStartDetect.setEnabled(true);
+                            buttonStartDetect.setText("开始检测");
+                            buttonStartDetect.setBackgroundColor(getResources().getColor(R.color.light_green));
+                        }
+                    });
+                } catch (final Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            msgDialog.setCancelable(true);
+                            msgDialog.setTitle("错误");
+                            msgDialog.setMessage("载入模型时发生错误: " + e.getMessage());
+                            msgDialog.show();
+                        }
+                    });
+                }
+            }
+        });
+        loadModelThread.start();
+    }
+
+    class BlinkThread implements Runnable {
+
+        @Override
+        public void run() {
+            Looper.prepare();
+            blinkHandler = new Handler() {
+                @Override
+                public void handleMessage(Message msg) {
+                    super.handleMessage(msg);
+                    final int class_type = msg.getData().getInt("cur");
+                    try {
+                        switch (msg.what) {
+                            case Constants.TOOTH_BLINK:
+                                //获得刚才发送的Message对象，然后在这里进行UI操作
+                                System.out.println("====> 闪烁牙面：" + msg.getData().getInt("cur"));
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        switchGreenPictures(class_type);
+                                    }
+                                });
+                                Thread.sleep(300);
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        recoverPicture(class_type);
+                                    }
+                                });
+                                Thread.sleep(200);
+                                break;
+                            case Constants.TOOTH_DONE:
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        switchPictures(class_type);
+                                        vibrator = (Vibrator) getSystemService(Service.VIBRATOR_SERVICE);
+                                        vibrator.vibrate(500);
+                                    }
+                                });
+                                System.out.println("====> 刷完了");
+                                break;
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            };
+            Looper.loop();
+
         }
     }
 }

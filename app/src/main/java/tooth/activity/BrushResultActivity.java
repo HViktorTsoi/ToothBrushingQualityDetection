@@ -4,11 +4,16 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
-import android.view.View;
+import android.text.method.ScrollingMovementMethod;
 import android.widget.TextView;
+
+import org.apache.commons.math3.stat.StatUtils;
+
+import java.util.Objects;
 
 import cjh.recorder.R;
 import tooth.util.Constants;
+import tooth.util.PositionButtonWrapper;
 
 /**
  * Created by JX on 2017/11/29.
@@ -16,121 +21,73 @@ import tooth.util.Constants;
 
 public class BrushResultActivity extends AppCompatActivity {
 
-    private TextView totaltime, grade, strings;
-
-    private int total_time = 0;
-    private int scores = 0;
-    private boolean[] string = new boolean[19];
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        TextView totaltime, scrores;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.brushresult_layout);
 
         Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
-        total_time = bundle.getInt(Constants.TOTAL_TIME);
-        scores = bundle.getInt(Constants.SCORES);
-        string = bundle.getBooleanArray(Constants.STRINGS);
+        assert bundle != null;
+        double[] timeAtPosition = bundle.getDoubleArray(Constants.TOTAL_TIME);
+        boolean[] finished = bundle.getBooleanArray(Constants.FINISHED);
+        double brushingTime = bundle.getDouble(Constants.BRUSHING_TIME);
 
-        initialize();
+        totaltime = (TextView) findViewById(R.id.brushresult_totaltime);
+        scrores = (TextView) findViewById(R.id.brushresult_grade);
+        TextView txtQualitified = (TextView) findViewById(R.id.quatified_brushresult);
+        TextView txtUnQualitified = (TextView) findViewById(R.id.unquatified_brushresult);
+        txtQualitified.setMovementMethod(ScrollingMovementMethod.getInstance());
+        txtUnQualitified.setMovementMethod(ScrollingMovementMethod.getInstance());
+
+//        totaltime.setText(timeFormat(total_time));
+//        scrores.setText(scores + getResources().getString(R.string.brushresult_fen));
+        txtQualitified.setText(buildStringResult(finished, timeAtPosition, true));
+        txtUnQualitified.setText(buildStringResult(finished, timeAtPosition, false));
+
+        scrores.setText(String.format("得分: %.1f分", countingScores(finished, timeAtPosition)));
+        totaltime.setText("总时间: " + timeFormat((int) brushingTime / 1000));
     }
 
-    private void initialize() {
-        totaltime = (TextView)findViewById(R.id.brushresult_totaltime);
-        grade = (TextView)findViewById(R.id.brushresult_grade);
-        strings = (TextView)findViewById(R.id.brushresult_strings);
 
-        totaltime.setText(timeFormat(total_time));
-        grade.setText(scores+getResources().getString(R.string.brushresult_fen));
-        strings.setText(stringFormat(string));
-
-    }
-
-    private String timeFormat(int timeseconds){
+    private String timeFormat(int timeSeconds) {
         String result = "";
 
-        if(timeseconds>=60){
-            result = timeseconds/60 + "m" + timeseconds%60 + "s";
-        }
-        else{
-            result = timeseconds + "s";
+        if (timeSeconds >= 60) {
+            result = timeSeconds / 60 + "m" + timeSeconds % 60 + "s";
+        } else {
+            result = timeSeconds + "s";
         }
         return result;
     }
 
-    private String stringFormat(boolean[] strs){
-        StringBuffer stringBuffer = new StringBuffer();
-        if(!strs[3]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_ulbo)+'\n');
+    private String buildStringResult(boolean[] finished, double[] timeAtPosition, boolean qualified) {
+        StringBuffer result = new StringBuffer();
+        for (int i = 3; i < finished.length; ++i) {
+            if (finished[i] == qualified) {
+                result.append(String.format("%s:  %.1fs\n", PositionButtonWrapper.labelList[i], timeAtPosition[i]));
+            }
         }
-        if(!strs[4]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_ufo)+'\n');
+        if (result.length() == 0) {
+            return "无";
+        } else {
+            return result.toString();
         }
-        if(!strs[5]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_urbo)+'\n');
-        }
-        if(!strs[6]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_ulbm)+'\n');
-        }
-        if(!strs[7]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_urbm)+'\n');
-        }
-        if(!strs[8]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_ulbi)+'\n');
-        }
-        if(!strs[9]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_ufi)+'\n');
-        }
-        if(!strs[10]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_urbi)+'\n');
-        }
-        if(!strs[11]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_dlbo)+'\n');
-        }
-        if(!strs[12]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_dfo)+'\n');
-        }
-        if(!strs[13]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_drbo)+'\n');
-        }
-        if(!strs[14]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_dlbm)+'\n');
-        }
-        if(!strs[15]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_drbm)+'\n');
-        }
-        if(!strs[16]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_dlbi)+'\n');
-        }
-        if(!strs[17]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_dfi)+'\n');
-        }
-        if(!strs[18]){
-            stringBuffer.append(getResources().getString(R.string.brushresult_drbi)+'\n');
-        }
-        return stringBuffer.toString();
     }
 
-
-    /*@Override
-    public void onClick(View v) {
-        Intent intent ;
-        switch (v.getId()){
-            case R.id.brushresult_totaltime:
-                intent = new Intent(BrushResultActivity.this,AddUserActivity.class);
-                startActivity(intent);
-                break;
-            case R.id.m:
-                intent = new Intent(BrushResultActivity.this,ChooseUserActivity.class);
-                startActivity(intent);
-                break;
-            case R.id.main_datacollection:
-                intent = new Intent(BrushResultActivity.this,CollectionActivity.class);
-                startActivity(intent);
-                break;
-            default:
-                ;
+    private double countingScores(boolean[] finished, double[] timeAtPosition) {
+        double sum = 0;
+        double threshold = 15;
+        for (int i = 3; i < finished.length; ++i) {
+            if (finished[i]) {
+                sum += (timeAtPosition[i] > 15 ? 15 : timeAtPosition[i]);
+            } else {
+                sum += 0 * timeAtPosition[i];
+            }
         }
-    }*/
+        return sum * 100 / (5 * 16);
+    }
+
 }
