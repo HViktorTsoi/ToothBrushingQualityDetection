@@ -35,7 +35,7 @@ public class TestFeatureCalc {
 //            if (!(classID == 1 || classID == 2 || classID == 3 || classID == 7 || classID == 8)) {
 //                continue;
 //            }
-            File audioFile = new File(String.format("/home/hviktortsoi/AndroidStudio/DeviceExplorer/samsung-sm_g9350-65502648/sdcard/brushingrecord/data/2018-08-08_11_53_41_aae1b7bb-ab10-4286-81bb-fe2f4a5bc4ea.arff_raw/%d.pcm", classID));
+            File audioFile = new File(String.format("/home/hviktortsoi/Research/Tooth/Audio/audio_files/%d.pcm", classID));
             InputStream inputStream = new FileInputStream(audioFile);
             int signalLength = (int) audioFile.length();
             byte[] signal = new byte[signalLength];
@@ -43,7 +43,11 @@ public class TestFeatureCalc {
             inputStream.close();
             List<Double> numericalDatalist = new ArrayList<>();
 //             将原始数据转换成double型数值数据 为了防止rawdata长度是奇数 需要判断时i+1
-            for (int i = 0; i + 1 < signal.length; i += 2) {
+            for (int i = 0; i + 1 < signal.length; i += 4) {
+                int sig = ParseUtil.rawAudioDataToShort(signal[i], signal[i + 1]);
+                numericalDatalist.add((double) sig);
+            }
+            for (int i = 2; i + 1 < signal.length; i += 4) {
                 int sig = ParseUtil.rawAudioDataToShort(signal[i], signal[i + 1]);
                 numericalDatalist.add((double) sig);
             }
